@@ -1,0 +1,10 @@
+{
+  "fqbn": {
+    "esp32cam": [
+      "esp32:esp32:esp32cam:FlashMode=dio,PartitionScheme=min_spiffs"
+    ]
+  },
+  "requires": [
+    "CONFIG_CAMERA_TASK_STACK_SIZE=[0-9]+"
+  ]
+}

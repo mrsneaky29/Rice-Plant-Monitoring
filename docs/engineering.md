@@ -1,0 +1,48 @@
+# Engineering record
+
+## Problem and design
+
+The central PC is not available continuously. Putting storage on each camera allows observations to survive PC downtime. The hub retrieves the backlog when it returns; keeping originals on SD makes the devices a second source of recovery.
+
+UDP announcements carry station identity and IP. Stations rotate their scheduled announcements in 20-minute slots, with staggered fallback attempts. The hub also broadcasts at startup and every minute. Device identity is persistent, but IP addresses are not: the prototype demonstrated a station moving to a different DHCP address. Each board needs a unique station number, even after flashing the same sketch.
+
+The devices stay powered and run their normal loops. The hourly capture timer is not an hourly power-on/deep-sleep cycle. There is no mechanism to wake a powered-off board remotely.
+
+## Queue and recovery
+
+The primary image key is `(station_id, date, filename)`. Photo synchronization alternates stations and orders a station's photos by date and filename. A download is staged as `.part`, checked for expected size and JPEG boundary markers, then renamed into place. SQLite uses WAL mode and full synchronization. Analyses have JSON sidecars; the database can reconstruct completed results from those files. Backups are produced at startup, shutdown, and hourly, retaining seven files.
+
+Submitted background response IDs support later retrieval. A crash between a successful remote submission and persistence of its response ID remains a possible duplicate-submission window. This is not a guarantee of exactly-once API execution. Exhaustive physical power-cut testing has not been documented.
+
+## Observed hardware validation
+
+The development session on **14 September 2026** recorded:
+
+| Check          | Recorded observation                                                              |
+| -------------- | --------------------------------------------------------------------------------- |
+| All stations   | Online, SD mounted, camera initialized, Camera-only profile, hourly timer enabled |
+| Plant 1        | A complete JPEG retrieved from the latest-frame endpoint                          |
+| Plant 2        | Manual capture saved successfully; JPEG size 302,654 bytes                        |
+| Plant 3        | Manual capture saved successfully; JPEG size 177,926 bytes                        |
+| Firmware build | 1,451,592 bytes of program storage; 99,052 bytes of global data in that build     |
+| Hub            | Tests, JavaScript syntax check, and packaged executable startup passed            |
+
+These measurements come from a previous development run. They do not establish long-term stability or inference accuracy. Fresh board flashing may preserve NVS settings; station role and identity must be checked after reboot. A 404 from `/latest.jpg` immediately after reboot can mean no post-reboot photo exists; `/snap` is the capture test.
+
+## Changes in the publication copy
+
+Wi-Fi and OTA credentials moved to an ignored `secrets.h`. Hub API keys can also come from the environment. Launching a second hub opens the existing dashboard before starting more workers or touching the database. JPEG validation rejects missing end markers. Documentation reflects the current Camera-only deployment and the optional status of analysis.
+
+## Limitations and next experiments
+
+- Evaluate tiller estimates against human-labelled photographs, including occlusion and multiple clumps.
+- Repeated counting checks currently happen inside one model response; independent requests need a separate experiment and cost accounting.
+- Add reproducible power-loss fault injection across queue transitions.
+- Evaluate authenticated device/hub control before operation beyond a trusted LAN.
+- Improve station discovery diagnostics and configure a reproducible time-zone policy. Firmware currently defaults to UTC+05:30.
+- SD retention is indefinite until storage fills; capacity needs monitoring.
+- Review inherited firmware attribution before selecting a redistribution license.
+
+## Portfolio interpretation
+
+This project offers concrete material for discussing embedded systems, networking, state recovery, and experimental limitations. The strongest evidence is the three-board prototype and its documented capture tests. Code size is not a measure of originality or impact. AI tools assisted implementation and debugging; no claim is made that every line was written manually or that the system improves crop yields.

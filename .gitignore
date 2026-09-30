@@ -1,0 +1,21 @@
+# Credentials and deployment data
+ESP32_Station/secrets.h
+.env
+PC_Hub/data/
+*.sqlite*
+*.analysis.json
+
+# Generated builds and dependencies
+__pycache__/
+*.py[cod]
+.venv/
+.dev-tools/
+node_modules/
+build*/
+dist/
+*.exe
+*.bin
+*.elf
+*.map
+*.spec
+.DS_Store

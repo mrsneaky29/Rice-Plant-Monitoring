@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Rice Plant Monitoring Hub</title>
+    <style>
+      :root {
+        --bg: #f3f7f1;
+        --panel: #fff;
+        --ink: #183126;
+        --muted: #65766d;
+        --line: #dce7df;
+        --green: #1f7650;
+        --green2: #dff1e7;
+        --amber: #a96812;
+        --red: #a73b36;
+        --shadow: 0 8px 28px rgba(32, 74, 52, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      .wrap {
+        width: min(1400px, calc(100% - 32px));
+        margin: auto;
+      }
+      .top {
+        background: #123d2b;
+        color: #fff;
+        padding: 22px 0;
+        box-shadow: var(--shadow);
+      }
+      .toprow,
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .toprow {
+        justify-content: space-between;
+      }
+      .brand {
+        font-size: 24px;
+        font-weight: 750;
+      }
+      .sub {
+        opacity: 0.75;
+        font-size: 13px;
+      }
+      .pill {
+        padding: 7px 11px;
+        border-radius: 99px;
+        background: #ffffff18;
+      }
+      .online-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #69d493;
+        margin-right: 7px;
+      }
+      .btn {
+        border: 0;
+        border-radius: 10px;
+        background: var(--green);
+        color: #fff;
+        padding: 10px 15px;
+        font-weight: 650;
+      }
+      .btn.secondary {
+        background: #fff;
+        color: var(--green);
+        border: 1px solid var(--line);
+      }
+      .btn.warn {
+        background: #fff4df;
+        color: #82530c;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .plants {
+        grid-template-columns: repeat(3, 1fr);
+        margin: 22px 0;
+      }
+      .card,
+      .section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .card {
+        overflow: hidden;
+      }
+      .photo {
+        aspect-ratio: 4/3;
+        background: linear-gradient(135deg, #dfe9e1, #edf3ee);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .cardbody {
+        padding: 16px;
+      }
+      .cardhead {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+      }
+      .card h2,
+      .section h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 99px;
+        background: var(--green2);
+        color: var(--green);
+      }
+      .tag.off {
+        background: #eee;
+        color: #777;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .metric {
+        background: #f7faf7;
+        padding: 10px;
+        border-radius: 10px;
+      }
+      .metric b {
+        display: block;
+        font-size: 18px;
+      }
+      .metric span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .section {
+        padding: 18px;
+        margin: 16px 0;
+      }
+      .sectionhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .settings {
+        grid-template-columns: 2fr 1fr;
+      }
+      .formgrid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .field label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      .field input,
+      .field select {
+        width: 100%;
+        height: 41px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 8px 10px;
+        background: #fff;
+        color: var(--ink);
+      }
+      .rangeout {
+        font-weight: 700;
+        color: var(--green);
+      }
+      .queue {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+      }
+      .q {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+      }
+      .q b {
+        display: block;
+        font-size: 20px;
+      }
+      .charts {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .chartbox {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .chartbox h3 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      .chartbox canvas {
+        width: 100%;
+        height: 180px;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .tile img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+        background: #eef2ef;
+      }
+      .tilebody {
+        padding: 10px;
+      }
+      .tilebody b {
+        display: block;
+      }
+      .tiny {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .events {
+        max-height: 270px;
+        overflow: auto;
+        border-top: 1px solid var(--line);
+      }
+      .event {
+        padding: 9px 3px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .setup {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .setupbox {
+        border: 1px solid var(--line);
+        padding: 12px;
+        border-radius: 12px;
+      }
+      .empty {
+        padding: 24px;
+        text-align: center;
+        color: var(--muted);
+      }
+      .toast {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        background: #173d2d;
+        color: #fff;
+        padding: 12px 16px;
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+        display: none;
+        z-index: 5;
+      }
+      @media (max-width: 950px) {
+        .plants,
+        .settings,
+        .charts {
+          grid-template-columns: 1fr;
+        }
+        .gallery {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .formgrid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .setup {
+          grid-template-columns: 1fr;
+        }
+        .queue {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 540px) {
+        .wrap {
+          width: min(100% - 18px, 1400px);
+        }
+        .gallery {
+          grid-template-columns: 1fr;
+        }
+        .formgrid {
+          grid-template-columns: 1fr;
+        }
+        .queue {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap toprow">
+        <div>
+          <div class="brand">Rice Plant Monitoring Hub</div>
+          <div class="sub">
+            Local monitoring · available while this PC is running
+          </div>
+        </div>
+        <div class="row">
+          <span class="pill"><i class="online-dot"></i>Hub online</span
+          ><button class="btn secondary" onclick="syncNow()">
+            Synchronize now
+          </button>
+        </div>
+      </div>
+    </header>
+    <main class="wrap">
+      <section id="plants" class="grid plants"></section>
+      <div class="grid settings">
+        <section class="section">
+          <div class="sectionhead">
+            <h2>Analysis controls</h2>
+            <span class="muted"
+              >New settings affect only jobs not yet submitted</span
+            >
+          </div>
+          <div class="formgrid">
+            <div class="field">
+              <label>Model</label
+              ><select id="model">
+                <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
+                <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
+                <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
+              </select>
+            </div>
+            <div class="field">
+              <label
+                >Reasoning effort:
+                <span id="effortOut" class="rangeout">Low</span></label
+              ><input
+                id="effort"
+                type="range"
+                min="0"
+                max="5"
+                value="1"
+                oninput="showEffort()"
+              />
+            </div>
+            <div class="field">
+              <label>Tiller-count passes</label
+              ><select id="passes">
+                <option selected>1</option>
+                <option>2</option>
+                <option>3</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>OpenAI API key (leave blank to keep)</label
+              ><input id="apiKey" type="password" placeholder="sk-…" />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 12px">
+            <button class="btn" onclick="saveSettings()">Save settings</button
+            ><span id="keyState" class="muted"></span>
+          </div>
+        </section>
+        <section class="section">
+          <div class="sectionhead"><h2>PC storage</h2></div>
+          <div id="storage" class="metrics"></div>
+        </section>
+      </div>
+      <section class="section">
+        <div class="sectionhead">
+          <h2>Synchronization & analysis queue</h2>
+          <span id="serverTime" class="muted"></span>
+        </div>
+        <div id="queue" class="queue"></div>
+        <div id="jobs" class="events" style="margin-top: 14px"></div>
+      </section>
+      <section class="section">
+        <div class="sectionhead">
+          <h2>Graphs</h2>
+          <span class="muted">Missing measurements are omitted</span>
+        </div>
+        <div id="charts" class="grid charts"></div>
+      </section>
+      <section class="section">
+        <div class="sectionhead">
+          <h2>Completed analyses & gallery</h2>
+          <button class="btn secondary" onclick="loadAnalyses()">
+            Refresh
+          </button>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </section>
+      <section class="section">
+        <div class="sectionhead">
+          <h2>Device setup</h2>
+          <span class="muted"
+            >Configure each camera by its current IP address</span
+          >
+        </div>
+        <div id="setup" class="setup"></div>
+      </section>
+      <section class="section">
+        <div class="sectionhead"><h2>Recent activity</h2></div>
+        <div id="events" class="events"></div>
+      </section>
+    </main>
+    <div id="toast" class="toast"></div>
+    <script>
+      const efforts = ["none", "low", "medium", "high", "xhigh", "max"];
+      let firstLoad = true;
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const bytes = (n) => {
+        if (n == null) return "—";
+        for (const u of ["B", "KB", "MB", "GB", "TB"]) {
+          if (n < 1024) return n.toFixed(n < 10 && u != "B" ? 1 : 0) + " " + u;
+          n /= 1024;
+        }
+        return n.toFixed(1) + " PB";
+      };
+      const val = (v, s = "") =>
+        v == null ? "—" : `${Number(v).toFixed(1)}${s}`;
+      function toast(m) {
+        let e = document.querySelector("#toast");
+        e.textContent = m;
+        e.style.display = "block";
+        setTimeout(() => (e.style.display = "none"), 2800);
+      }
+      async function api(url, opt) {
+        let r = await fetch(url, opt);
+        let x = await r.json();
+        if (!r.ok || x.ok === false) throw Error(x.error || "Request failed");
+        return x;
+      }
+      function showEffort() {
+        document.querySelector("#effortOut").textContent = efforts[
+          +document.querySelector("#effort").value
+        ]
+          .replace("xhigh", "XHigh")
+          .replace(/^./, (c) => c.toUpperCase());
+      }
+      function analysisMetrics(a) {
+        if (!a)
+          return '<div class="metric"><b>Pending</b><span>Analysis</span></div>';
+        let r = a.result || {};
+        return `<div class="metric"><b>${esc(r.final_tiller_count ?? r.tiller_count ?? "—")}</b><span>Tillers</span></div><div class="metric"><b>${esc(r.growth_stage ?? "—")}</b><span>Growth stage</span></div><div class="metric"><b>${r.water_level_cm == null ? "—" : val(r.water_level_cm, " cm")}</b><span>Water level</span></div><div class="metric"><b>${esc(a.model.replace("gpt-5.6-", ""))}</b><span>${esc(a.effort)} · ${a.passes} pass${a.passes == 1 ? "" : "es"}</span></div>`;
+      }
+      function plantCard(s) {
+        let p = s.latest_photo,
+          a = s.latest_analysis,
+          st = s.status || {},
+          photo = p
+            ? `<img src="/api/photo?${new URLSearchParams({ station_id: s.station_id, date: p.date, filename: p.filename })}">`
+            : "No synchronized photo yet";
+        let sd =
+          st.total_mb != null
+            ? `<div class="metric"><b>${esc(st.free_mb)} MB</b><span>ESP SD free of ${esc(st.total_mb)} MB</span></div>`
+            : "";
+        return `<article class="card"><div class="photo">${photo}</div><div class="cardbody"><div class="cardhead"><div><h2>${esc(s.name || s.station_id)}</h2><div class="tiny">${esc(s.station_id)} · ${esc(s.ip || "IP not discovered")}</div></div><span class="tag ${s.online ? "" : "off"}">${s.online ? "Online" : "Offline"}</span></div><div class="metrics"><div class="metric"><b>Camera only</b><span>External sensors ignored</span></div>${sd}${analysisMetrics(a)}</div><button class="btn" style="margin-top:12px;width:100%" ${s.online ? "" : "disabled"} onclick='takePhoto(${JSON.stringify(s.station_id)},this)'>${s.online ? "Take photo now" : "Camera offline"}</button></div></article>`;
+      }
+      function queueHtml(q) {
+        return [
+          "discovered",
+          "downloading",
+          "downloaded",
+          "submitted",
+          "completed",
+          "archived",
+          "failed",
+        ]
+          .map(
+            (k) =>
+              `<div class="q"><b>${q[k] || 0}</b><span>${k[0].toUpperCase() + k.slice(1)}</span></div>`,
+          )
+          .join("");
+      }
+      function sensorText() {
+        return "Camera-only mode";
+      }
+      function jobsHtml(rows) {
+        return (
+          rows
+            .map(
+              (j) =>
+                `<div class="event"><b>${esc(j.station_id)}</b> · ${esc(j.filename)} · <span class="tag ${j.state == "failed" ? "off" : ""}">${esc(j.state)}${j.state == "submitted" && j.response_id ? " · recoverable" : ""}</span><br><span class="tiny">${esc(sensorText(j))}${j.error ? " · " + esc(j.error) : ""}</span>${j.state == "failed" ? ` <button class="btn warn" onclick='retryJob(${JSON.stringify(j.station_id)},${JSON.stringify(j.date)},${JSON.stringify(j.filename)})'>Retry</button>` : ""}</div>`,
+            )
+            .join("") || '<div class="empty">No synchronized photos yet.</div>'
+        );
+      }
+      async function refresh() {
+        try {
+          let x = await api("/api/state");
+          document.querySelector("#plants").innerHTML = x.stations
+            .map(plantCard)
+            .join("");
+          document.querySelector("#queue").innerHTML = queueHtml(x.queue);
+          document.querySelector("#jobs").innerHTML = jobsHtml(x.jobs || []);
+          document.querySelector("#events").innerHTML =
+            x.events
+              .map(
+                (e) =>
+                  `<div class="event"><span class="tiny">${esc(e.created_at)}</span> · ${esc(e.message)}</div>`,
+              )
+              .join("") || '<div class="empty">No activity yet</div>';
+          document.querySelector("#serverTime").textContent =
+            "Updated " + new Date(x.server_time).toLocaleTimeString();
+          let d = x.storage;
+          document.querySelector("#storage").innerHTML =
+            `<div class="metric"><b>${bytes(d.used)}</b><span>Drive used</span></div><div class="metric"><b>${bytes(d.free)}</b><span>Drive free</span></div>`;
+          if (firstLoad) {
+            document.querySelector("#model").value = x.settings.model;
+            document.querySelector("#effort").value = efforts.indexOf(
+              x.settings.effort,
+            );
+            document.querySelector("#passes").value = x.settings.passes;
+            document.querySelector("#keyState").textContent = x.settings
+              .api_key_set
+              ? "API key saved"
+              : "API key required";
+            showEffort();
+            firstLoad = false;
+            buildSetup(x.stations);
+            loadCharts();
+            loadAnalyses();
+          }
+        } catch (e) {
+          toast("Hub update failed: " + e.message);
+        }
+      }
+      async function saveSettings() {
+        try {
+          let p = {
+            model: model.value,
+            effort: efforts[+effort.value],
+            passes: +passes.value,
+          };
+          if (apiKey.value.trim()) p.api_key = apiKey.value.trim();
+          await api("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(p),
+          });
+          apiKey.value = "";
+          toast("Analysis settings saved");
+          refresh();
+        } catch (e) {
+          toast(e.message);
+        }
+      }
+      async function syncNow() {
+        try {
+          await api("/api/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          toast("Synchronization started");
+        } catch (e) {
+          toast(e.message);
+        }
+      }
+      async function takePhoto(station_id, button) {
+        let old = button.textContent;
+        button.disabled = true;
+        button.textContent = "Taking photo…";
+        try {
+          let x = await api("/api/snap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ station_id }),
+          });
+          toast(`${station_id} photo saved`);
+          setTimeout(() => {
+            refresh();
+            loadAnalyses();
+          }, 2500);
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = old;
+        }
+      }
+      function buildSetup(stations) {
+        document.querySelector("#setup").innerHTML = [1, 2, 3]
+          .map((n) => {
+            let s = stations.find((x) => x.station_no == n) || {};
+            return `<div class="setupbox"><h3 style="margin-top:0">Plant ${n}</h3><div class="field"><label>Current ESP IP</label><input id="ip${n}" value="${esc(s.ip || "")}"></div><div class="field"><label>Name</label><input id="name${n}" value="${esc(s.name || `Plant ${n}`)}"></div><div class="field"><label>Profile</label><select id="role${n}"><option value="camera" selected>Camera only</option></select></div><button class="btn" style="margin-top:10px" onclick="configure(${n})">Save to ESP & restart</button></div>`;
+          })
+          .join("");
+      }
+      async function configure(n) {
+        try {
+          await api("/api/device-config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              station_no: n,
+              ip: document.querySelector("#ip" + n).value,
+              name: document.querySelector("#name" + n).value,
+              role: document.querySelector("#role" + n).value,
+              reboot: true,
+            }),
+          });
+          toast(`Plant ${n} configured; it is restarting`);
+        } catch (e) {
+          toast(e.message);
+        }
+      }
+      function drawChart(canvas, series) {
+        let c = canvas.getContext("2d"),
+          w = (canvas.width = canvas.clientWidth * devicePixelRatio),
+          h = (canvas.height = 180 * devicePixelRatio);
+        c.clearRect(0, 0, w, h);
+        let vals = series.flatMap((s) => s.values).filter((v) => v != null);
+        if (!vals.length) return;
+        let lo = Math.min(...vals),
+          hi = Math.max(...vals);
+        if (lo == hi) {
+          lo -= 1;
+          hi += 1;
+        }
+        let pad = 24 * devicePixelRatio;
+        c.strokeStyle = "#dce7df";
+        c.beginPath();
+        c.moveTo(pad, pad);
+        c.lineTo(pad, h - pad);
+        c.lineTo(w - pad, h - pad);
+        c.stroke();
+        series.forEach((s, j) => {
+          let v = s.values;
+          c.strokeStyle = s.color;
+          c.lineWidth = 2 * devicePixelRatio;
+          c.beginPath();
+          v.forEach((x, i) => {
+            if (x == null) return;
+            let px = pad + (w - 2 * pad) * (i / Math.max(1, v.length - 1)),
+              py = h - pad - ((h - 2 * pad) * (x - lo)) / (hi - lo);
+            i ? c.lineTo(px, py) : c.moveTo(px, py);
+          });
+          c.stroke();
+        });
+      }
+      async function loadCharts() {
+        let boxes = [],
+          timelines = [],
+          a = (await api("/api/analyses")).rows;
+        for (let n = 1; n <= 3; n++) {
+          let r = a.filter((v) => v.station_id == `plant-${n}`).reverse();
+          if (
+            r.some(
+              (v) =>
+                v.result?.final_tiller_count != null ||
+                v.result?.tiller_count != null,
+            )
+          )
+            boxes.push({
+              title: `Plant ${n} tiller count`,
+              series: [
+                {
+                  color: "#7555a6",
+                  values: r.map(
+                    (v) => v.result.final_tiller_count ?? v.result.tiller_count,
+                  ),
+                },
+              ],
+            });
+          if (r.some((v) => v.result?.water_level_cm != null))
+            boxes.push({
+              title: `Plant ${n} water level (cm)`,
+              series: [
+                {
+                  color: "#2474a6",
+                  values: r.map((v) => v.result.water_level_cm),
+                },
+              ],
+            });
+          let stages = r.filter((v) => v.result?.growth_stage).slice(-12);
+          if (stages.length)
+            timelines.push(
+              `<div class="chartbox"><h3>Plant ${n} growth-stage timeline</h3>${stages.map((v) => `<div class="event"><span class="tiny">${esc(v.date)}</span> · ${esc(v.result.growth_stage)}</div>`).join("")}</div>`,
+            );
+        }
+        charts.innerHTML =
+          boxes
+            .map(
+              (b, i) =>
+                `<div class="chartbox"><h3>${esc(b.title)}</h3><canvas id="chart${i}"></canvas></div>`,
+            )
+            .join("") + timelines.join("") ||
+          '<div class="empty">Analysis graphs will appear after new photos are processed.</div>';
+        boxes.forEach((b, i) =>
+          drawChart(document.querySelector("#chart" + i), b.series),
+        );
+      }
+      async function loadAnalyses() {
+        try {
+          let a = (await api("/api/analyses")).rows;
+          gallery.innerHTML =
+            a
+              .map((x) => {
+                let r = x.result || {},
+                  q = new URLSearchParams({
+                    station_id: x.station_id,
+                    date: x.date,
+                    filename: x.filename,
+                  });
+                return `<div class="tile"><img loading="lazy" src="/api/photo?${q}"><div class="tilebody"><b>${esc(x.station_id)} · ${esc(r.final_tiller_count ?? r.tiller_count ?? "—")} tillers</b><div>${esc(r.growth_stage ?? "Stage unavailable")} · ${r.water_level_cm == null ? "Water unavailable" : val(r.water_level_cm, " cm water")}</div><div class="tiny">Camera-only mode</div><div class="tiny">${esc(x.model)} · ${esc(x.effort)} · ${x.passes} pass${x.passes == 1 ? "" : "es"}</div><button class="btn warn" style="margin-top:8px" onclick='reanalyze(${JSON.stringify(x.station_id)},${JSON.stringify(x.date)},${JSON.stringify(x.filename)})'>Reanalyze</button></div></div>`;
+              })
+              .join("") ||
+            '<div class="empty">No completed analyses yet.</div>';
+        } catch (e) {
+          toast(e.message);
+        }
+      }
+      async function reanalyze(station_id, date, filename) {
+        if (!confirm("Queue this photo for a fresh analysis?")) return;
+        await api("/api/reanalyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ station_id, date, filename }),
+        });
+        toast("Photo queued for reanalysis");
+        refresh();
+      }
+      async function retryJob(station_id, date, filename) {
+        await api("/api/retry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ station_id, date, filename }),
+        });
+        toast("Job queued to retry");
+        refresh();
+      }
+      refresh();
+      setInterval(refresh, 5000);
+      setInterval(() => {
+        loadCharts();
+        loadAnalyses();
+      }, 60000);
+    </script>
+  </body>
+</html>
