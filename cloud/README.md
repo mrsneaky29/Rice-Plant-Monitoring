@@ -1,12 +1,14 @@
 # Rice Cloud
 
-Private camera dashboard at **https://admin.riceplant.achantalabs.com**. Three ESP32-CAM stations communicate directly with the cloud; no PC bridge is needed. The original local hub and firmware remain separate and unchanged.
+Private camera dashboard at **https://admin.riceplant.achantalabs.com**. This variant supports three ESP32-CAM stations communicating directly with the cloud; Plant 2 is verified, and Plants 1 and 3 await rollout. A PC bridge is not required. The original local hub and firmware remain separate.
 
 ## Operation
 
 Sleep mode is off until explicitly enabled. With sleep enabled, the station wakes on its photo schedule, reads pending cloud commands, saves a due JPEG to SD, uploads it with a checksum, and returns to deep sleep. Failed uploads remain on SD and retry later. Photos are never automatically deleted from the card.
 
 The dashboard queues **Take photo**, **Stay awake**, **Resume sleep**, and schedule changes. A deeply sleeping station cannot receive commands until its next wake. **Press its physical RESET button** for immediate local wake: reset/power-on starts a ten-minute maintenance session. Stay awake extends that session until Resume sleep or reboot. Local OTA remains available while awake.
+
+Resume sleep clears the temporary Stay awake override; it does not enable a disabled sleep setting. Disabling the photo timer also prevents automatic deep sleep. The dashboard accepts intervals from one hour to seven days and local-time windows, including windows crossing midnight. Changes take effect when the board receives and reports them, not when the button is pressed. Full physical sleep/wake acceptance is pending.
 
 The dashboard distinguishes requested settings from settings reported by the station. A blank station has not connected yet; old imported status is historical and does not prove current connectivity. Observation photos and AI estimates are shown separately. Analysis is disabled in the initial deployment.
 
@@ -20,7 +22,7 @@ Plant 2 received protected normal firmware via OTA. Camera initialization, SD mo
 
 Plants 1 and 3 have not completed this cloud firmware rollout. Plant 2 sleep remains off, and a full physical sleep/wake cycle is still unverified. A local status request timed out during capture/upload activity while cloud reports continued; local responsiveness under load needs further testing. Existing SD photos were counted without importing their contents, but their file-by-file integrity has not been established.
 
-The repository includes server and backup improvements that may be newer than the deployed server release. Compiling source or passing tests does not prove a live deployment or hardware acceptance.
+The deployed backend release is `20261017-cloud-v3`, checked on 18 October. Later server and backup improvements are in this source but were not deployed during the protected firmware restoration; the live website update was limited to photo-display CSS. Compiling source or passing tests does not prove a live deployment or hardware acceptance.
 
 ## Layout
 
@@ -49,6 +51,8 @@ The preview uses an isolated `.private/preview-data` directory and listens only 
 
 Keep the existing Wi-Fi and OTA settings in ignored `firmware/ESP32_Station/secrets.h`. Use the Arduino CLI supplied by your Arduino IDE:
 
+For a fresh source checkout, first create the Python environment from Local testing above, install Arduino ESP32 core **3.3.11** and **ArduinoJson 7.4.3**, and copy `firmware/ESP32_Station/secrets.example.h` to the ignored `secrets.h`. Configure each board's saved station identity before building/flashing its matching token. The build helper does not assign the board's NVS identity. Do not rerun provisioning expecting credential rotation: existing configuration is preserved.
+
 ```powershell
 .\.venv\Scripts\python.exe deploy\build_firmware.py plant-2 --cli "C:\path\to\arduino-cli.exe"
 .\.venv\Scripts\python.exe deploy\flash_ota.py plant-2 192.168.1.204 --espota "C:\path\to\esp32\tools\espota.py"
@@ -58,7 +62,7 @@ Build one image per station because its bearer credential is bound to that ident
 
 For an additional identity check, pass `--expected-mac "AA:BB:CC:DD:EE:FF"` with the verified hardware MAC. The OTA helper also checks the historical-upload policy and requires photo protection in a normal image's manifest. `--status-only` builds a separate diagnostic image that leaves SD unmounted and disables photo uploads and cloud commands; its reported zero photo count does not establish an empty card.
 
-Update one board first, verify camera/SD/cloud operation, then test a short sleep interval and physical RESET before updating the others. Reverting requires an awake board or serial access; keep the previous firmware image available. Physical current measurement is required before claiming a particular power saving.
+Update one board first, verify camera/SD/cloud operation, then test a complete scheduled sleep/wake cycle and physical RESET before extending rollout. Reverting requires an awake board or serial access; keep the previous firmware image available. Physical current measurement is required before claiming a particular power saving. Sensor wiring and defaults are described in the [firmware README](firmware/ESP32_Station/README.md).
 
 ## Droplet installation
 
@@ -78,9 +82,27 @@ In the DigitalOcean droplet Console, `journalctl -u rice-cloud.service -f` follo
 
 Additional camera SD photos can be inventoried/imported using `deploy/import_sd.py` when a reader is available. Keep each card associated with its station; do not merge two cards under the same camera identity. Power off a camera before removing its card.
 
+For a read-only inventory, run `python deploy/import_sd.py plant-2 "E:\DCIM"` with the actual reader's DCIM folder. Upload is an additional explicit `--upload` option, which is not part of the current SD retrieval plan. The original files remain on the card; keep a separate verified copy before any future cleanup.
+
 ## Optional analysis
 
 Analysis is disabled by default. Enable it only after configuring a supported model, provider key and desired count checks in the private server environment; restart the service. New uploads can then enqueue work. Historical import does not enqueue analysis. The single-process worker stores background response IDs, resumes polling after restarts, and marks ambiguous submissions uncertain rather than automatically resending a potentially paid request. Count checks within one response are not independent model samples, and estimates are not agronomically validated.
+
+Private environment fields are `RICE_OPENAI_API_KEY`, `RICE_ANALYSIS_MODEL`, `RICE_ANALYSIS_PASSES` (1–3) and `RICE_ANALYSIS_ENABLED`. The requested model string in this source is `gpt-6.1-sol`; verify API account availability rather than inferring it from a Codex model name. `deploy/configure_analysis.py` checks that requested ID and prepares local configuration, but does not deploy it. The live service remains disabled until deliberately configured and restarted. Never put a key in Git, the public website or a command-line argument. Existing historical records can appear in Analysis history while automatic analysis is disabled.
+
+## Troubleshooting and acceptance
+
+| Symptom | Interpretation or next check |
+| --- | --- |
+| Old LAN address stops responding | DHCP may have changed; discover the station and verify identity/MAC before acting |
+| Cloud heartbeat arrives but local status times out | Capture/upload or SD contention can delay local HTTP; avoid repeated probes or resetting during a write |
+| Diagnostic firmware reports zero photos | SD is deliberately unmounted; this does not establish an empty or damaged card |
+| Take photo remains pending | Sleeping boards wait until the next wake; diagnostic firmware deliberately ignores commands |
+| Capture completed but image not visible yet | Command acknowledgement and photo upload are separate; wait for an accepted upload and dashboard refresh |
+| SD fails to mount or fills | Preserve originals and inspect through a reader; no automatic formatting or photo deletion occurs |
+| USB power is present but no serial port appears | A charging connection alone does not provide a USB-to-serial interface |
+
+Software checks on 18 October passed 78 isolated Python tests, 7 dashboard tests and 6 original hub tests, plus ESP32 compile-time checks and a normal firmware build. These do not replace power-cut, weak-Wi-Fi, file-by-file SD integrity, or physical sleep/wake acceptance. The hardened backup code is in source; confirm the deployed release before relying on a particular fix. `python deploy/backup.py --verify ARCHIVE.tar.gz` validates a restore in temporary storage and does not replace the live database.
 
 ## Publication boundaries
 

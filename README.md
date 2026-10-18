@@ -3,6 +3,7 @@
 **Three ESP32 cameras with SD originals, a local monitoring hub, and a separate cloud dashboard.**
 
 [![Source checks](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/checks.yml/badge.svg)](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/checks.yml)
+[![Cloud checks](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/cloud.yml/badge.svg)](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/cloud.yml)
 ![Hardware](https://img.shields.io/badge/hardware-ESP32--CAM-246b46)
 ![Hub](https://img.shields.io/badge/hub-Python%20%2B%20SQLite-346b9b)
 ![Deployment](https://img.shields.io/badge/deployment-local%20%2B%20cloud-646a6b)
@@ -12,6 +13,8 @@ Rice growth is gradual; useful observations need to survive gaps in computer ava
 The project grew through physical assembly, firmware flashing, live camera tests, network troubleshooting, and changes to how data is retained. It is a working prototype with documented limitations and a reproducible source build.
 
 ![System architecture](docs/architecture.svg)
+
+The main path is ESP32 → verified HTTPS → DigitalOcean service → private browser dashboard. Commands travel back at the next device sync or wake. The original local PC hub remains a separate optional path, rather than a required bridge.
 
 ## Current cloud verification — 18 October 2026
 
@@ -36,7 +39,7 @@ Local HTTP status can time out during capture/upload activity even while cloud r
 4. The dashboard shows each plant's latest photograph, connection status, SD capacity, and available analysis history. **Take photo now** requests a fresh image from a specific camera.
 5. When the PC stops, the dashboard becomes unavailable. The powered ESPs continue recording to SD and synchronize again when the hub returns.
 
-The historical local-hub deployment used **Camera-only mode**. Earlier soil-moisture and DHT22 support remains in the source. In the original firmware the boards stay powered; its hourly schedule controls capture. The separate cloud firmware adds optional deep sleep and retains station-specific sensor profiles.
+The historical local-hub deployment used **Camera-only mode**. Earlier soil-moisture and DHT22 support remains in the source. In the original firmware the boards stay powered; its hourly schedule controls capture. The cloud firmware adds optional deep sleep. Both variants include a one-time Camera-only role migration; later explicit sensor roles remain supported. Physical wiring does not prove an enabled sensor profile.
 
 ## Features
 
@@ -50,6 +53,9 @@ The historical local-hub deployment used **Camera-only mode**. Earlier soil-mois
 | Recoverable analysis | Stored background response IDs, JSON result sidecars, and rolling database backups |
 | Local dashboard | Gallery, queue, plant cards, storage, settings, and available analysis graphs |
 | Optional image analysis | Structured tiller-count checks, growth-stage estimates, water-level estimates, and confidence fields |
+| Direct cloud operation | Per-device authenticated HTTPS reports/uploads and password-protected remote controls; verified on Plant 2 |
+| Protected cloud captures | New-photo upload intents, retained SD originals, blocked photo deletion and historical uploads off by default |
+| Optional cloud sleep | Queued settings, timer wake and RESET maintenance; physical sleep/wake acceptance pending |
 
 ## Run the PC hub
 
@@ -79,7 +85,9 @@ The hub creates photographs, queue state, backups, and optional API-key files in
 
 ## Prepare the hardware
 
-You need three AI Thinker ESP32-CAM boards with PSRAM, compatible camera modules, microSD cards, stable power, and a local Wi-Fi network. The development setup used OV5640 cameras; check `board_config.h` and the camera initialization settings against your hardware.
+You need AI Thinker ESP32-CAM boards with PSRAM, compatible camera modules, microSD cards, stable power, and 2.4 GHz Wi-Fi. The original configuration targets OV5640; Plant 2's current cloud boot log detects an OV3660. Check the detected sensor and board configuration rather than assuming all modules are identical.
+
+The following steps prepare the **original local-hub firmware**. For direct cloud operation, follow the separate [cloud provisioning and OTA instructions](cloud/README.md#private-provisioning-and-camera-builds); the variants have different upload and photo-protection behavior.
 
 1. Copy `ESP32_Station/secrets.example.h` to `ESP32_Station/secrets.h` and fill in your Wi-Fi and OTA credentials. The local file is excluded from Git.
 2. Open `ESP32_Station/ESP32_Station.ino` in Arduino IDE. Select **AI Thinker ESP32-CAM**, **DIO** flash mode, and install **ArduinoJson 7.4.3**. Keep the supplied `partitions.csv` beside the sketch; it defines two OTA application slots.
@@ -88,6 +96,8 @@ You need three AI Thinker ESP32-CAM boards with PSRAM, compatible camera modules
 5. Enable the one-hour timer on each ESP's web page if needed. Fresh installations default to a disabled timer, with an interval of 3,600 seconds. Take a manual photo to verify capture and SD storage.
 
 The firmware applies a one-time migration from existing sensor profiles to Camera-only while preserving Wi-Fi settings, identities, schedules, and SD photographs. OTA requires a running board connected to the network. See [setup and troubleshooting](docs/setup.md) for build commands and common failures.
+
+Historical wiring identifies Plant 1 by ADS1115 on GPIO3/RX0 and GPIO1/TX0, Plant 2 by DHT22 data on GPIO13, and Plant 3 by its lack of an assigned external sensor. Confirm identity and MAC before each update. Working OTA firmware permits wireless updates; a fresh or unreachable board may require serial access.
 
 ## Optional photo analysis
 
@@ -143,6 +153,8 @@ scripts/                       Source validation helpers
 ## Current limits
 
 The original hub and local ESP control endpoints are trusted-LAN interfaces and must not be exposed to the public internet. The cloud dashboard uses password sessions and CSRF protection; devices authenticate with individual credentials. SD storage is retained until capacity is exhausted. Comprehensive power-cut testing and labelled image-analysis evaluation remain future work. The cloud analysis worker marks ambiguous submissions uncertain rather than automatically retrying a potentially paid request; the original hub has a separate submission/persistence failure window.
+
+Source backups in Drive exclude credentials, photographs, databases and compiled firmware. They are not monitoring-data backups. Cloud data backups currently remain on the same droplet; a separate offsite data backup is still needed. Never format a card or assume a diagnostic zero count establishes missing photos.
 
 ## Development and attribution
 
