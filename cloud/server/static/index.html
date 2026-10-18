@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183d2b">
+  <title>Rice Cloud · Field dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main id="login-view" class="login-shell" hidden>
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="brand-mark" aria-hidden="true">R<span>·</span></div>
+      <p class="eyebrow">RICE CLOUD / FIELD ADMIN</p>
+      <h1 id="login-title">Welcome back</h1>
+      <p class="muted">Sign in to manage your camera stations and review field photos.</p>
+      <form id="login-form">
+        <label for="password">Admin password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button class="button primary full" type="submit">Sign in <span aria-hidden="true">→</span></button>
+        <p id="login-error" class="form-error" role="alert" hidden></p>
+      </form>
+      <p class="login-foot"><span class="lock-icon" aria-hidden="true">●</span> Private field workspace</p>
+    </section>
+    <div class="login-decor" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  </main>
+
+  <div id="app-view" class="app-shell" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" aria-label="Rice Cloud overview"><span class="brand-mark small">R<span>·</span></span><span>rice<span class="brand-light">cloud</span></span></a>
+      <div class="workspace-label">FIELD WORKSPACE</div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-view="overview"><span class="nav-icon">◫</span> Overview</button>
+        <button class="nav-link" data-view="gallery"><span class="nav-icon">▧</span> Photo gallery <span id="gallery-count" class="nav-count">0</span></button>
+        <button class="nav-link" data-view="analysis"><span class="nav-icon">⌁</span> Analysis history <span id="analysis-count" class="nav-count">0</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="connection"><span class="connection-dot"></span><span><strong>Admin session</strong><small>Private field dashboard</small></span></div>
+        <button id="logout-button" class="nav-link logout"><span class="nav-icon">↪</span> Sign out</button>
+        <div class="sidebar-caption">RICE CLOUD <span>·</span> CAMERA NETWORK</div>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button id="menu-button" class="icon-button menu-button" aria-label="Open navigation" aria-expanded="false">☰</button>
+        <div class="breadcrumb"><span>Field workspace</span><b>/</b><strong id="page-title">Overview</strong></div>
+        <div class="topbar-actions"><span class="live-label"><i></i> AUTO REFRESH</span><span id="last-updated" class="last-updated">Connecting…</span><button id="refresh-button" class="icon-button" aria-label="Refresh dashboard" title="Refresh">↻</button></div>
+      </header>
+
+      <div id="global-error" class="global-error" role="alert" hidden></div>
+      <section id="overview-view" class="page-view page-content" aria-labelledby="overview-title">
+        <div class="page-heading">
+          <div><p class="eyebrow">YOUR FIELD, AT A GLANCE</p><h1 id="overview-title">Plant overview</h1><p class="muted">Camera-only monitoring for your rice plants.</p></div>
+          <span id="sync-badge" class="sync-badge"><span class="pulse-dot"></span> Syncing</span>
+        </div>
+
+        <section class="notice" aria-label="Command delivery information"><span class="notice-icon">↗</span><div><strong>Commands reach a station at its next wake</strong><p>Sleeping stations keep their battery-saving schedule. Pressing ESP RESET wakes a station immediately for a 10-minute maintenance window with local and cloud controls.</p></div></section>
+
+        <div class="section-title-row"><div><h2>Your stations</h2><p class="muted">Reported station state and its next scheduled check-in.</p></div><span id="station-total" class="subtle-count">— stations</span></div>
+        <div id="stations-grid" class="stations-grid" aria-live="polite"><div class="loading-card"><span class="spinner"></span> Loading station data…</div></div>
+
+        <section class="settings-panel" aria-labelledby="cloud-settings-title">
+          <div class="settings-heading"><div><p class="eyebrow">NETWORK DEFAULTS</p><h2 id="cloud-settings-title">Cloud photo schedule</h2><p class="muted">Requested settings are queued for the next station wake. Applied values update after the station reports back.</p></div><span class="settings-icon">◷</span></div>
+          <form id="cloud-settings-form" class="settings-form">
+              <label class="toggle-setting"><input id="cloud-sleep" type="checkbox"><span class="switch"></span><span><strong>Battery-saving sleep</strong><small>Let stations sleep between scheduled photo checks.</small></span></label>
+            <div class="settings-fields">
+              <label class="toggle-setting compact"><input id="timer-enabled" type="checkbox" checked><span class="switch"></span><span><strong>Scheduled photos</strong><small>Take photos on an interval.</small></span></label>
+              <label class="field-label" for="interval-hours">Photo interval <span class="field-inline"><input id="interval-hours" type="number" min="1" max="168" step="0.01" value="1"> <span>hours</span></span></label>
+              <label class="toggle-setting compact"><input id="window-enabled" type="checkbox"><span class="switch"></span><span><strong>Limit to a time window</strong><small>Use local station time.</small></span></label>
+              <div class="time-fields"><label class="field-label" for="window-start">From<input id="window-start" type="time" value="06:00"></label><label class="field-label" for="window-end">Until<input id="window-end" type="time" value="18:00"></label></div>
+            </div>
+            <div class="settings-footer"><span id="settings-feedback" class="settings-feedback" aria-live="polite">Defaults are unsaved requests. Choose a schedule and queue it explicitly.</span><button class="button primary" type="submit">Queue for all stations <span aria-hidden="true">→</span></button></div>
+          </form>
+        </section>
+
+        <section class="recent-section"><div class="section-title-row"><div><h2>Recent photos</h2><p class="muted">The latest images received from your stations.</p></div><button class="text-button" data-view="gallery">View gallery <span aria-hidden="true">→</span></button></div><div id="recent-photos" class="recent-grid"></div></section>
+        <footer class="page-footer">Camera observations only <span>·</span> No crop health conclusions are shown here</footer>
+      </section>
+
+      <section id="gallery-view" class="page-view page-content" aria-labelledby="gallery-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">FIELD PHOTO ARCHIVE</p><h1 id="gallery-title">Photo gallery</h1><p class="muted">Browse images uploaded by your camera stations.</p></div><div id="gallery-total" class="gallery-total">0 photos</div></div>
+        <div class="filter-bar">
+          <label class="search-field"><span aria-hidden="true">⌕</span><input id="photo-search" type="search" placeholder="Search station or filename" aria-label="Search photos"></label>
+          <label class="filter-select"><span class="sr-only">Station</span><select id="station-filter"><option value="all">All stations</option></select></label>
+          <label class="filter-select"><span class="sr-only">Date</span><select id="date-filter"><option value="all">Any time</option><option value="today">Today</option><option value="week">Past 7 days</option><option value="month">Past 30 days</option></select></label>
+        </div>
+        <div id="photo-grid" class="photo-grid" aria-live="polite"></div>
+        <footer class="page-footer">Photos are shown as received from the stations.</footer>
+      </section>
+
+      <section id="analysis-view" class="page-view page-content" aria-labelledby="analysis-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">FIELD OBSERVATIONS &amp; PHOTO REVIEW</p>
+            <h1 id="analysis-title">Photo analysis</h1>
+            <p class="muted">Automatic cloud photo analysis and imported historical records.</p>
+          </div>
+          <div id="analysis-total" class="gallery-total">0 reports</div>
+        </div>
+
+        <section id="analysis-status-notice" class="analysis-summary" aria-label="Analysis status">
+          <span class="analysis-summary-icon">⌁</span>
+          <p><strong>Cloud photo analysis</strong><br>New photos are reviewed in the background after upload, so stations can return to sleep right away.</p>
+        </section>
+
+        <div class="section-title-row">
+          <div>
+            <h2>Cloud analysis jobs</h2>
+            <p class="muted">Live status and structured results for uploaded photos.</p>
+          </div>
+          <span id="analysis-jobs-count" class="subtle-count">0 jobs</span>
+        </div>
+        <div id="analysis-jobs" class="analysis-records" aria-live="polite">
+          <div class="loading-card"><span class="spinner"></span> Loading analysis jobs…</div>
+        </div>
+
+        <div class="section-title-row archive-heading">
+          <div>
+            <h2>Imported historical archive</h2>
+            <p class="muted">Historical records imported from your local monitoring hub.</p>
+          </div>
+          <span id="analysis-archive-count" class="subtle-count">0 records</span>
+        </div>
+        <div id="analysis-timeline" class="analysis-timeline"></div>
+        <div id="analysis-records" class="analysis-records" aria-live="polite"><div class="loading-card"><span class="spinner"></span> Loading imported analysis records…</div></div>
+        <footer class="page-footer">Photo review runs in the background after upload <span>·</span> Camera stations can sleep immediately</footer>
+      </section>
+    </div>
+  </div>
+
+  <dialog id="station-dialog" class="modal"><form method="dialog"><button class="modal-close icon-button" aria-label="Close">×</button></form><div id="station-dialog-content"></div></dialog>
+  <dialog id="photo-dialog" class="photo-modal"><form method="dialog"><button class="modal-close icon-button" aria-label="Close">×</button></form><img id="photo-large" alt="Rice plant station photo"><div id="photo-caption" class="photo-caption"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

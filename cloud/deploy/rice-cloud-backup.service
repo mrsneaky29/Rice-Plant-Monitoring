@@ -1,0 +1,14 @@
+[Unit]
+Description=Back up and verify rice cloud records and photographs
+
+[Service]
+Type=oneshot
+User=rice-cloud
+Group=rice-cloud
+UMask=0077
+ExecStart=/opt/rice-cloud/venv/bin/python /opt/rice-cloud/current/deploy/backup.py
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/rice-cloud /var/lib/rice-cloud
+PrivateTmp=true

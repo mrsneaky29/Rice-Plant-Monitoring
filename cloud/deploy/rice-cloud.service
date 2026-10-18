@@ -1,0 +1,25 @@
+[Unit]
+Description=Rice camera cloud service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rice-cloud
+Group=rice-cloud
+WorkingDirectory=/opt/rice-cloud/current/server
+EnvironmentFile=/etc/rice-cloud/server.env
+ExecStart=/opt/rice-cloud/venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8796 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rice-cloud
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

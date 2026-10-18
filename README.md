@@ -1,19 +1,34 @@
 # Rice Plant Monitoring
 
-**A three-camera monitoring system that keeps recording when the central computer is off.**
+**Three ESP32 cameras with SD originals, a local monitoring hub, and a separate cloud dashboard.**
 
 [![Source checks](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/checks.yml/badge.svg)](https://github.com/mrsneaky29/Rice-Plant-Monitoring/actions/workflows/checks.yml)
 ![Hardware](https://img.shields.io/badge/hardware-ESP32--CAM-246b46)
 ![Hub](https://img.shields.io/badge/hub-Python%20%2B%20SQLite-346b9b)
-![Deployment](https://img.shields.io/badge/deployment-local%20Wi--Fi-646a6b)
+![Deployment](https://img.shields.io/badge/deployment-local%20%2B%20cloud-646a6b)
 
-Rice growth is gradual; useful observations need to survive gaps in computer availability. This project connects three ESP32-CAM boards to a local PC hub so that each camera can record photographs to its own microSD card, while the PC handles synchronization, browsing, and optional image analysis whenever it is running.
+Rice growth is gradual; useful observations need to survive gaps in computer availability. Each ESP32-CAM retains photographs on its microSD card. The original PC hub provides local synchronization, browsing, and optional analysis. The separate [`cloud/`](cloud/README.md) implementation adds direct HTTPS uploads and a password-protected dashboard on a DigitalOcean droplet.
 
 The project grew through physical assembly, firmware flashing, live camera tests, network troubleshooting, and changes to how data is retained. It is a working prototype with documented limitations and a reproducible source build.
 
 ![System architecture](docs/architecture.svg)
 
-## What happens in normal use?
+## Current cloud verification — 18 October 2026
+
+| Area | Verified state |
+| --- | --- |
+| Dashboard | Deployed; automatic refresh and complete, uncropped photo cards verified in the browser |
+| Plant 2 | Normal firmware OTA-installed; camera/SD healthy; three dashboard captures completed and uploaded directly to the droplet |
+| Original photographs | Retained on SD; automatic legacy-file relocation disabled; historical uploads require explicit opt-in |
+| Upload recovery | New captures use temporary files and durable upload markers; acknowledgement retains the original |
+| Photo protection | Delete/erase controls blocked in the cloud firmware build; no destructive route was invoked during validation |
+| Sleep | Implemented; remains off on Plant 2; full physical sleep/wake acceptance still pending |
+| Plants 1 and 3 | Cloud firmware rollout deferred; no current cloud-operation claim for either board |
+| Automatic analysis | Code included; disabled on the deployed service; no paid requests made during verification |
+
+Local HTTP status can time out during capture/upload activity even while cloud reporting continues. Power-cut recovery, weak-Wi-Fi stress tests, and SD file-by-file integrity checks remain outstanding. Source in this repository may include server improvements awaiting deployment; the live dashboard change in this session was limited to photo display CSS.
+
+## Original local-hub operation
 
 1. Each configured station takes an hourly photograph and saves it locally.
 2. The PC hub discovers cameras on the same Wi-Fi, including cameras whose IP addresses changed.
@@ -21,7 +36,7 @@ The project grew through physical assembly, firmware flashing, live camera tests
 4. The dashboard shows each plant's latest photograph, connection status, SD capacity, and available analysis history. **Take photo now** requests a fresh image from a specific camera.
 5. When the PC stops, the dashboard becomes unavailable. The powered ESPs continue recording to SD and synchronize again when the hub returns.
 
-All three stations currently use **Camera-only mode**. The earlier soil-moisture and DHT22 modules remain in the source but are disabled and ignored in this deployment. The boards stay powered; the hourly schedule controls capture, not deep sleep or power switching.
+The historical local-hub deployment used **Camera-only mode**. Earlier soil-moisture and DHT22 support remains in the source. In the original firmware the boards stay powered; its hourly schedule controls capture. The separate cloud firmware adds optional deep sleep and retains station-specific sensor profiles.
 
 ## Features
 
@@ -37,6 +52,18 @@ All three stations currently use **Camera-only mode**. The earlier soil-moisture
 | Optional image analysis | Structured tiller-count checks, growth-stage estimates, water-level estimates, and confidence fields |
 
 ## Run the PC hub
+
+### Optional cloud deployment
+
+The separate [`cloud/`](cloud/README.md) implementation adds a password-protected
+dashboard, direct ESP32 HTTPS photo uploads, queued remote controls, and optional
+scheduled deep sleep with RESET-button maintenance access. It uses a dedicated
+service and storage on the existing cloud server; no PC bridge is required.
+Original hub/firmware files below remain available unchanged. See the cloud
+README for private provisioning, station-specific OTA builds, tests, backup
+restoration, and the physical acceptance checks required before enabling sleep.
+
+### Original local hub
 
 The hub runtime uses the **Python standard library**. Install Python 3.12 or newer and run this command from the repository root:
 
@@ -64,7 +91,7 @@ The firmware applies a one-time migration from existing sensor profiles to Camer
 
 ## Optional photo analysis
 
-The cameras do not send API requests. Analysis runs on the PC after an image is downloaded. Supply `OPENAI_API_KEY` in the hub environment or save a key through the dashboard to enable the existing integration.
+In the original hub, analysis runs on the PC after an image is downloaded. Supply `OPENAI_API_KEY` in the hub environment or save a key through its dashboard to enable that integration. The separate cloud service has an optional asynchronous analysis worker, currently disabled in the live deployment; see [cloud analysis configuration](cloud/README.md#optional-analysis).
 
 The settings expose model, reasoning effort, and one to three tiller-count checks. Their configured model identifiers reflect the original development environment; verify availability and reasoning support in your API account before enabling paid requests. By default, photographs created before the hub's first analysis cutoff are synchronized as history rather than automatically analyzed. New photos are eligible, and reanalysis is an explicit action.
 
@@ -93,6 +120,13 @@ node scripts/check-dashboard.cjs
 
 GitHub Actions runs the hub tests, checks dashboard JavaScript, and compiles the firmware with example credentials. Historical hardware observations do not imply continuous uptime or current device availability.
 
+Cloud validation also covers isolated server, import, backup, publication and restoration regressions, dashboard tests, and ESP32 compilation. Run the cloud suite after installing `cloud/server/requirements-dev.txt`:
+
+```powershell
+python -m pytest cloud/server/tests cloud/deploy/test_sd_import.py cloud/deploy/test_pull_camera.py cloud/review_tests -q
+node --test cloud/server/tests/static_client.test.cjs
+```
+
 ## Source map
 
 ```text
@@ -100,6 +134,7 @@ ESP32_Station/                 Camera firmware, SD storage, Wi-Fi, OTA, and time
 PC_Hub/Monitoring_Hub.py        Discovery, synchronization, persistence, and HTTP API
 PC_Hub/static/index.html        Local dashboard and camera controls
 PC_Hub/test_hub.py              Isolated tests with temporary storage
+cloud/                         Separate cloud server, firmware, tests and deployment tools
 docs/                          Architecture, setup, and engineering record
 scripts/                       Source validation helpers
 .github/workflows/             Automated checks
@@ -107,7 +142,7 @@ scripts/                       Source validation helpers
 
 ## Current limits
 
-This is a trusted-LAN prototype: the dashboard and device control endpoints do not have user authentication and should not be exposed to the public internet. SD storage is retained until capacity is exhausted. Comprehensive power-cut testing and labelled image-analysis evaluation remain future work. A crash between remote API submission and persistence of its response ID can still lead to a duplicate submission.
+The original hub and local ESP control endpoints are trusted-LAN interfaces and must not be exposed to the public internet. The cloud dashboard uses password sessions and CSRF protection; devices authenticate with individual credentials. SD storage is retained until capacity is exhausted. Comprehensive power-cut testing and labelled image-analysis evaluation remain future work. The cloud analysis worker marks ambiguous submissions uncertain rather than automatically retrying a potentially paid request; the original hub has a separate submission/persistence failure window.
 
 ## Development and attribution
 

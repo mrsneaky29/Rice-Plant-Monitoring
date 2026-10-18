@@ -1,0 +1,5 @@
+.worktrees/
+.superpowers/
+cloud_secrets.h
+secrets.h
+build/

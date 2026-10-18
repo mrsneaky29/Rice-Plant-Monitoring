@@ -1,0 +1,41 @@
+name: Rice cloud checks
+on:
+  push:
+    paths: ['cloud/**', '.github/workflows/cloud.yml']
+  pull_request:
+    paths: ['cloud/**', '.github/workflows/cloud.yml']
+permissions:
+  contents: read
+jobs:
+  server-and-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r cloud/server/requirements-dev.txt
+      - run: python -m pytest cloud/server/tests cloud/deploy/test_sd_import.py cloud/deploy/test_pull_camera.py cloud/review_tests -q
+      - run: node --test cloud/server/tests/static_client.test.cjs
+      - run: g++ -std=c++17 -fsyntax-only cloud/firmware/tests/capture_schedule_logic_test.cpp cloud/review_tests/cloud_upload_policy_test.cpp
+  cloud-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install tested toolchain
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.11
+          arduino-cli lib install ArduinoJson@7.4.3
+      - name: Compile cloud firmware with non-production credentials
+        run: |
+          cp cloud/firmware/ESP32_Station/secrets.example.h cloud/firmware/ESP32_Station/secrets.h
+          printf '#pragma once\n#define CLOUD_DEVICE_TOKEN "ci-placeholder-no-access"\n#define CLOUD_ROOT_CA "ci-placeholder-not-a-certificate"\n' > cloud/firmware/ESP32_Station/cloud_secrets.h
+          arduino-cli compile --fqbn esp32:esp32:esp32cam --output-dir /tmp/rice-cloud-firmware cloud/firmware/ESP32_Station
+          python -c "from pathlib import Path; assert Path('/tmp/rice-cloud-firmware/ESP32_Station.ino.bin').stat().st_size <= 0x1e0000"

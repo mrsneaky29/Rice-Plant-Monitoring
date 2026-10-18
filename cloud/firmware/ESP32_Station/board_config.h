@@ -1,0 +1,38 @@
+#ifndef BOARD_CONFIG_H
+#define BOARD_CONFIG_H
+
+// PSRAM required for QXGA/UXGA JPEG. Partition scheme needs >= 3MB APP.
+
+//#define CAMERA_MODEL_WROVER_KIT
+//#define CAMERA_MODEL_ESP_EYE
+//#define CAMERA_MODEL_ESP32S3_EYE
+//#define CAMERA_MODEL_M5STACK_PSRAM
+//#define CAMERA_MODEL_M5STACK_V2_PSRAM
+//#define CAMERA_MODEL_M5STACK_WIDE
+//#define CAMERA_MODEL_M5STACK_ESP32CAM
+//#define CAMERA_MODEL_M5STACK_UNITCAM
+//#define CAMERA_MODEL_M5STACK_CAMS3_UNIT
+#define CAMERA_MODEL_AI_THINKER
+#define CAMERA_SENSOR_OV5640
+
+//#define CAMERA_MODEL_TTGO_T_JOURNAL
+//#define CAMERA_MODEL_XIAO_ESP32S3
+//#define CAMERA_MODEL_ESP32_CAM_BOARD
+//#define CAMERA_MODEL_ESP32S2_CAM_BOARD
+//#define CAMERA_MODEL_ESP32S3_CAM_LCD
+//#define CAMERA_MODEL_DFRobot_FireBeetle2_ESP32S3
+//#define CAMERA_MODEL_DFRobot_Romeo_ESP32S3
+
+#include "camera_pins.h"
+
+// Header I2C for ADS1115 (camera SCCB 26/27 is not on the pin headers):
+//   SDA = GPIO 3 (RX0)   SCL = GPIO 1 (TX0)
+// Unplug the ADS1115 when flashing over USB-TTL. GPIO 16/17 are PSRAM.
+#ifndef PERIPH_I2C_SDA
+#define PERIPH_I2C_SDA 3
+#endif
+#ifndef PERIPH_I2C_SCL
+#define PERIPH_I2C_SCL 1
+#endif
+
+#endif
