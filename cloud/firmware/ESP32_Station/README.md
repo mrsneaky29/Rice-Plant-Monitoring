@@ -49,6 +49,8 @@ The dashboard queues capture, settings, Stay awake and Resume sleep. Awake board
 
 Sleep is off by default and must be explicitly enabled. Resume sleep clears the temporary Stay awake override; it does not enable a disabled sleep setting. Disabling the photo timer also prevents automatic deep sleep. Upload work is bounded and the schedule is recomputed before sleeping, but a complete physical sleep/wake cycle remains unverified.
 
+On 22 October, Plant 2 reported sleep enabled with a one-hour interval. That reported setting does not establish reliable capture: daytime photo gaps and two user-issued captures ending in `uncertain` / `reset_during_command` remain under investigation. No firmware update was made during that follow-up.
+
 Command IDs and in-progress results are journaled under `/CLOUD` on SD. A reset during capture is reported as uncertain rather than blindly repeating it. Commands requiring the journal fail when SD is unavailable.
 
 ## Diagnostic mode and logs

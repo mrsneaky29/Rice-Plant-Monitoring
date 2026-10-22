@@ -14,6 +14,8 @@ The project grew through physical assembly, firmware flashing, live camera tests
 
 ![System architecture](docs/architecture.svg)
 
+The diagram includes the dated 18 October rollout checkpoint; the current verification table below records the later settings and outstanding issues.
+
 The main path is ESP32 → verified HTTPS → DigitalOcean service → private browser dashboard. Commands travel back at the next device sync or wake. The original local PC hub remains a separate optional path, rather than a required bridge.
 
 ## Current cloud verification — 22 October 2026
