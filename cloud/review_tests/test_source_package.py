@@ -9,9 +9,9 @@ def test_package_publishes_sources_without_private_or_generated_storage(tmp_path
     package = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(package)
     package.ROOT = tmp_path
-    allowed = {'README.md', '.gitignore', 'server/app.py', 'server/static/app.js', 'deploy/build_firmware.py',
+    allowed = {'README.md', '.gitignore', 'Configure-Analysis.ps1', 'server/app.py', 'server/static/app.js', 'deploy/build_firmware.py',
                'firmware/ESP32_Station/cloud_run_mode.h', 'review_tests/test_example.py',
-               'review_tests/policy_test.cpp'}
+               'review_tests/policy_test.cpp', 'review_tests/photo_capture_time.test.cjs'}
     forbidden = {'.private/server.env', 'firmware/ESP32_Station/secrets.h',
                  'firmware/ESP32_Station/cloud_secrets.h', 'server/data/photo.jpg',
                  'server/photo.jpeg', 'server/private.key', 'server/private.pem',

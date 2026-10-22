@@ -7,7 +7,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED_PARTS = {'.private', '.venv', '.git', '__pycache__', '.pytest_cache', 'data', 'node_modules'}
 EXCLUDED_NAMES = {'secrets.h', 'cloud_secrets.h', '.env', 'PHOTO_INVENTORY.md', 'AGY_REVIEW.md', 'AGY_RESTORE_HANDOFF.md'}
-PUBLIC_ROOT_FILES = {'.gitignore', 'README.md', 'API_CONTRACT.md', 'Configure-Private.ps1'}
+PUBLIC_ROOT_FILES = {'.gitignore', 'README.md', 'API_CONTRACT.md', 'Configure-Private.ps1', 'Configure-Analysis.ps1'}
 PUBLIC_DIRECTORIES = {'server', 'deploy', 'firmware', 'review_tests'}
 
 
@@ -19,8 +19,8 @@ def sources(server_only: bool = False):
         if len(relative.parts) > 1 and relative.parts[0] not in PUBLIC_DIRECTORIES:
             continue
         # Review runs may leave arbitrary temporary fixtures beside the tests.
-        # Publish only the actual top-level Python/C++ regression sources.
-        if relative.parts[0] == 'review_tests' and (len(relative.parts) != 2 or path.suffix not in {'.py', '.cpp'}):
+        # Publish only the actual top-level Python/C++/Node regression sources.
+        if relative.parts[0] == 'review_tests' and (len(relative.parts) != 2 or path.suffix not in {'.py', '.cpp', '.cjs'}):
             continue
         if path.is_symlink() or not path.is_file() or set(relative.parts) & EXCLUDED_PARTS or path.name in EXCLUDED_NAMES:
             continue

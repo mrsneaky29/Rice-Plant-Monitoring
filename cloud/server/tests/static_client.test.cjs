@@ -51,7 +51,7 @@ function harness(options = {}) {
     'settings-feedback', 'cloud-sleep', 'timer-enabled', 'interval-hours', 'window-enabled',
     'window-start', 'window-end', 'login-form', 'logout-button', 'refresh-button', 'menu-button', 'sidebar',
     'cloud-settings-form', 'station-dialog', 'station-dialog-content', 'photo-dialog', 'photo-large',
-    'photo-caption', 'toast', 'overview-view', 'gallery-view', 'analysis-view', 'page-title'
+    'photo-caption', 'toast', 'overview-view', 'gallery-view', 'analysis-view', 'page-title', 'analysis-footer-status'
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, new ElementStub(id)]));
   elements.password.value = 'test-pass';
@@ -158,6 +158,7 @@ test('admin login loads the API state, matches latest photos, and starts polling
   assert.doesNotMatch(ui.elements['stations-grid'].innerHTML, /Plant 2[\s\S]*?Reported sleeping/);
   assert.match(ui.elements['stations-grid'].innerHTML, /src="http:\/\/localhost\/api\/photos\/42"/, 'station latest photo joins photo list by station/date/filename');
   assert.match(ui.elements['last-updated'].textContent, /Updated/);
+  assert.equal(ui.elements['analysis-footer-status'].textContent, 'Automatic photo analysis is off');
   assert.ok(ui.calls.some((call) => call.url === '/api/analyses'));
 });
 

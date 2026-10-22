@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#183d2b">
   <title>Rice Cloud · Field dashboard</title>
   <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=capture-analysis-20261022" defer></script>
 </head>
 <body>
   <main id="login-view" class="login-shell" hidden>
@@ -75,8 +75,8 @@
           </form>
         </section>
 
-        <section class="recent-section"><div class="section-title-row"><div><h2>Recent photos</h2><p class="muted">The latest images received from your stations.</p></div><button class="text-button" data-view="gallery">View gallery <span aria-hidden="true">→</span></button></div><div id="recent-photos" class="recent-grid"></div></section>
-        <footer class="page-footer">Camera observations only <span>·</span> No crop health conclusions are shown here</footer>
+        <section class="recent-section"><div class="section-title-row"><div><h2>Recent photos</h2><p class="muted">The latest photos by camera capture time.</p></div><button class="text-button" data-view="gallery">View gallery <span aria-hidden="true">→</span></button></div><div id="recent-photos" class="recent-grid"></div></section>
+        <footer class="page-footer">Camera observations and visual estimates <span>·</span> <span id="analysis-footer-status">Checking automatic analysis status…</span></footer>
       </section>
 
       <section id="gallery-view" class="page-view page-content" aria-labelledby="gallery-title" hidden>

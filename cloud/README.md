@@ -10,7 +10,7 @@ The dashboard queues **Take photo**, **Stay awake**, **Resume sleep**, and sched
 
 Resume sleep clears the temporary Stay awake override; it does not enable a disabled sleep setting. Disabling the photo timer also prevents automatic deep sleep. The dashboard accepts intervals from one hour to seven days and local-time windows, including windows crossing midnight. Changes take effect when the board receives and reports them, not when the button is pressed. Full physical sleep/wake acceptance is pending.
 
-The dashboard distinguishes requested settings from settings reported by the station. A blank station has not connected yet; old imported status is historical and does not prove current connectivity. Observation photos and AI estimates are shown separately. Analysis is disabled in the initial deployment.
+The dashboard distinguishes requested settings from settings reported by the station. A blank station has not connected yet; old imported status is historical and does not prove current connectivity. Observation photos and AI estimates are shown separately. The initial deployment had analysis disabled; the configured live service enables it for new ordinary uploads as of 22 October 2026.
 
 Photo cards show complete images at their natural aspect ratio, including on mobile. Hovering does not zoom or crop them; enlargement remains optional.
 
@@ -23,6 +23,16 @@ Plant 2 received protected normal firmware via OTA. Camera initialization, SD mo
 Plants 1 and 3 have not completed this cloud firmware rollout. Plant 2 sleep remains off, and a full physical sleep/wake cycle is still unverified. A local status request timed out during capture/upload activity while cloud reports continued; local responsiveness under load needs further testing. Existing SD photos were counted without importing their contents, but their file-by-file integrity has not been established.
 
 The deployed backend release is `20261017-cloud-v3`, checked on 18 October. Later server and backup improvements are in this source but were not deployed during the protected firmware restoration; the live website update was limited to photo-display CSS. Compiling source or passing tests does not prove a live deployment or hardware acceptance.
+
+## Live follow-up — 22 October 2026
+
+The dashboard now displays the capture timestamp encoded in each camera filename, with camera-local clock components preserved. Gallery ordering, date filters and latest-photo selection use capture dates rather than upload arrival dates. Upload time remains separately labeled in the enlarged-photo caption and gallery tooltip. Photos without a valid timestamp show "Capture time unavailable" instead of substituting an upload time.
+
+Automatic analysis is enabled in the live private environment using verified account access to `gpt-6.1-sol`, one verification pass per new ordinary upload. The deployed backend received the archive-import exclusion and missing startup import fix, alongside the tested worker. No historical jobs were queued. A new successful camera upload is still required to verify a complete paid analysis/report cycle.
+
+Release checks passed 89 isolated Python tests and 13 JavaScript checks, including delayed uploads, capture-date filtering, unknown timestamps, secure activation, enabled startup and duplicate/archive queue safety. The published dashboard assets matched their tested hashes and the service health check passed.
+
+Plant 2 currently reports sleep enabled with a one-hour interval. Read-only observation found daytime photo gaps; two user-issued capture commands returned `uncertain` with `reset_during_command`, without a new cloud photo. No camera firmware or settings were changed in this follow-up. A scheduled wake/capture/upload/sleep cycle and the cause of these resets remain under investigation. The older 18 October results above are a dated checkpoint, not proof of current reliability.
 
 ## Layout
 
@@ -40,6 +50,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r server\requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest server\tests deploy\test_sd_import.py deploy\test_pull_camera.py review_tests -q
 node --test server\tests\static_client.test.cjs
+node --test review_tests\photo_capture_time.test.cjs
 .\.venv\Scripts\python.exe deploy\preview.py
 ```
 
@@ -88,7 +99,7 @@ For a read-only inventory, run `python deploy/import_sd.py plant-2 "E:\DCIM"` wi
 
 Analysis is disabled by default. Enable it only after configuring a supported model, provider key and desired count checks in the private server environment; restart the service. New uploads can then enqueue work. Historical import does not enqueue analysis. The single-process worker stores background response IDs, resumes polling after restarts, and marks ambiguous submissions uncertain rather than automatically resending a potentially paid request. Count checks within one response are not independent model samples, and estimates are not agronomically validated.
 
-Private environment fields are `RICE_OPENAI_API_KEY`, `RICE_ANALYSIS_MODEL`, `RICE_ANALYSIS_PASSES` (1–3) and `RICE_ANALYSIS_ENABLED`. The requested model string in this source is `gpt-6.1-sol`; verify API account availability rather than inferring it from a Codex model name. `deploy/configure_analysis.py` checks that requested ID and prepares local configuration, but does not deploy it. The live service remains disabled until deliberately configured and restarted. Never put a key in Git, the public website or a command-line argument. Existing historical records can appear in Analysis history while automatic analysis is disabled.
+Private environment fields are `RICE_OPENAI_API_KEY`, `RICE_ANALYSIS_MODEL`, `RICE_ANALYSIS_PASSES` (1–3) and `RICE_ANALYSIS_ENABLED`. The requested model is `gpt-6.1-sol`; account access was verified before live activation. For a fresh setup, `Configure-Analysis.ps1` opens a hidden key prompt and checks model access without submitting an analysis. The equivalent command is `python deploy/configure_analysis.py --prompt-key`. It prepares ignored local configuration only. `python deploy/activate_analysis.py` securely forwards only the four analysis settings through SSH input, checks the deployed archive exclusion and absence of outstanding jobs, retains a private rollback copy, and restarts only Rice Cloud. It refuses repeat activation while analysis is already on. The configured live service stays enabled across restarts; a fresh unconfigured installation remains disabled until a key and model are deliberately configured. Never put a key in Git, browser code or a command-line argument.
 
 ## Troubleshooting and acceptance
 
@@ -99,6 +110,8 @@ Private environment fields are `RICE_OPENAI_API_KEY`, `RICE_ANALYSIS_MODEL`, `RI
 | Diagnostic firmware reports zero photos | SD is deliberately unmounted; this does not establish an empty or damaged card |
 | Take photo remains pending | Sleeping boards wait until the next wake; diagnostic firmware deliberately ignores commands |
 | Capture completed but image not visible yet | Command acknowledgement and photo upload are separate; wait for an accepted upload and dashboard refresh |
+| A request disappears from the pending queue without a photo | Disappearance is not proof of success; inspect its completed, failed or uncertain result. A reset during a started capture is reported as uncertain and is not blindly repeated |
+| Photo upload warning remains after recovery | The present dashboard can retain a warning from the error counter since reboot, even when the latest error is empty; this display defect remains unresolved |
 | SD fails to mount or fills | Preserve originals and inspect through a reader; no automatic formatting or photo deletion occurs |
 | USB power is present but no serial port appears | A charging connection alone does not provide a USB-to-serial interface |
 

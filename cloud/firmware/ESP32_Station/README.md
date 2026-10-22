@@ -57,4 +57,4 @@ Command IDs and in-progress results are journaled under `/CLOUD` on SD. A reset 
 
 Read `/status` for health, identity and settings, and `/log?lines=80` for the RAM log. USB serial can show ROM boot messages; this sketch does not mirror the application RAM log to serial. A charging-only USB connection does not provide serial access. Close live preview after testing to release the camera.
 
-The device sends no OpenAI analysis request. The optional cloud worker is disabled in the deployed service; the original PC hub has a separate optional analysis integration.
+The device sends no OpenAI analysis request. As of 22 October 2026, the cloud worker is enabled for newly uploaded ordinary photos using the configured server-side key; historical imports remain excluded. This required no firmware update. The original PC hub has a separate optional analysis integration.

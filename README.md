@@ -16,20 +16,20 @@ The project grew through physical assembly, firmware flashing, live camera tests
 
 The main path is ESP32 → verified HTTPS → DigitalOcean service → private browser dashboard. Commands travel back at the next device sync or wake. The original local PC hub remains a separate optional path, rather than a required bridge.
 
-## Current cloud verification — 18 October 2026
+## Current cloud verification — 22 October 2026
 
 | Area | Verified state |
 | --- | --- |
-| Dashboard | Deployed; automatic refresh and complete, uncropped photo cards verified in the browser |
-| Plant 2 | Normal firmware OTA-installed; camera/SD healthy; three dashboard captures completed and uploaded directly to the droplet |
+| Dashboard | Deployed; full photo cards; capture-time display, gallery order and date filters use camera filename timestamps |
+| Plant 2 | Three direct cloud captures verified on 18 October; on 22 October, daytime gaps and two reset-interrupted capture commands were observed; reliable hourly capture is not established |
 | Original photographs | Retained on SD; automatic legacy-file relocation disabled; historical uploads require explicit opt-in |
 | Upload recovery | New captures use temporary files and durable upload markers; acknowledgement retains the original |
 | Photo protection | Delete/erase controls blocked in the cloud firmware build; no destructive route was invoked during validation |
-| Sleep | Implemented; remains off on Plant 2; full physical sleep/wake acceptance still pending |
+| Sleep | Plant 2 now reports enabled with a one-hour interval; reliable full wake/capture/upload/sleep acceptance remains pending |
 | Plants 1 and 3 | Cloud firmware rollout deferred; no current cloud-operation claim for either board |
-| Automatic analysis | Code included; disabled on the deployed service; no paid requests made during verification |
+| Automatic analysis | Enabled for new ordinary uploads with verified `gpt-6.1-sol` account access; historical imports excluded; first complete live analysis/report cycle awaits a successful new upload |
 
-Local HTTP status can time out during capture/upload activity even while cloud reporting continues. Power-cut recovery, weak-Wi-Fi stress tests, and SD file-by-file integrity checks remain outstanding. Source in this repository may include server improvements awaiting deployment; the live dashboard change in this session was limited to photo display CSS.
+Local HTTP status can time out while cloud reporting continues. Power-cut recovery, weak-Wi-Fi stress tests, SD file-by-file integrity checks and the current camera-reset cause remain outstanding. The live backend retains its original release with targeted analysis startup/archive safeguards and a worker update; other server/backup improvements in source may still await deployment. No camera firmware or settings changed during the 22 October follow-up.
 
 ## Original local-hub operation
 

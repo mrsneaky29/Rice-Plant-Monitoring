@@ -1,4 +1,5 @@
 """Reuse the existing local OpenAI key privately and verify requested model access."""
+import argparse
 import getpass
 import json
 from pathlib import Path
@@ -9,8 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 MODEL = 'gpt-6.1-sol'
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--prompt-key', action='store_true', help='Enter a key privately instead of reusing a saved key.')
+    args = parser.parse_args()
     key_file = ROOT.parent / 'Three_ESP_Monitoring' / 'PC_Hub' / 'data' / 'openai_key.txt'
-    key = key_file.read_text(encoding='utf-8').strip() if key_file.is_file() else getpass.getpass('OpenAI API key: ').strip()
+    key = key_file.read_text(encoding='utf-8').strip() if key_file.is_file() and not args.prompt_key else getpass.getpass('Paste your OpenAI API key (hidden), then press Enter: ').strip()
     if not key or '\n' in key or '\r' in key:
         raise SystemExit('A valid local API key is required; nothing was enabled.')
     request = urllib.request.Request(f'https://api.openai.com/v1/models/{MODEL}', headers={'Authorization': f'Bearer {key}'})

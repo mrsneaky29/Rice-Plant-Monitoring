@@ -149,6 +149,8 @@
       model.stations = Array.isArray(data.stations) ? data.stations : [];
       model.photos = Array.isArray(data.photos) ? data.photos : [];
       model.analysisEnabled = data.analysis_enabled === true;
+      const analysisFooter = $('#analysis-footer-status');
+      if (analysisFooter) analysisFooter.textContent = model.analysisEnabled ? 'Automatic photo analysis is on' : 'Automatic photo analysis is off';
       model.settings = data.settings || null;
       seedSettingsFromReportedState();
       model.lastUpdated = new Date();
@@ -172,6 +174,35 @@
     if (!value) return fallback;
     const date = new Date(dateValue(value));
     return Number.isNaN(date.getTime()) ? escapeHtml(value) : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+
+  // Filenames record the camera's local clock. Preserve those wall-clock
+  // components rather than presenting the upload time as a capture time.
+  function photoCaptureTime(photo) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})__(\d{2})-(\d{2})-(\d{2})-(\d{3})\.jpe?g$/i.exec(String(photo?.filename || ''));
+    if (!match) return NaN;
+    const [year, month, day, hour, minute, second, millis] = match.slice(1).map(Number);
+    if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) return NaN;
+    const date = new Date(year, month - 1, day, hour, minute, second, millis);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return NaN;
+    return date.getTime();
+  }
+
+  function photoSortTime(photo) {
+    const captured = photoCaptureTime(photo);
+    if (Number.isFinite(captured)) return captured;
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(photo?.date || '')) ? dateValue(`${photo.date}T00:00:00`) : NaN;
+    return Number.isFinite(dateOnly) ? dateOnly : 0;
+  }
+
+  function photoCaptureLabel(photo) {
+    const captured = photoCaptureTime(photo);
+    return Number.isFinite(captured) ? `Captured ${formatDate(captured)} (camera time)` : 'Capture time unavailable';
+  }
+
+  function photoReceivedLabel(photo) {
+    return photo?.uploaded_at ? `Received ${formatDate(photo.uploaded_at)}` : 'Upload time unavailable';
   }
 
   function relativeTime(value) {
@@ -230,13 +261,15 @@
   }
 
   function getLatestPhoto(station) {
+    const newest = model.photos.filter((photo) => String(photo.station_id) === String(station.station_id)).sort((a, b) => photoSortTime(b) - photoSortTime(a))[0];
+    if (newest) return newest;
     const embedded = station.latest_photo;
     if (embedded && typeof embedded === 'object') {
       const byId = embedded.id && model.photos.find((photo) => String(photo.id) === String(embedded.id));
       const byIdentity = model.photos.find((photo) => String(photo.station_id) === String(station.station_id) && photo.date === embedded.date && photo.filename === embedded.filename);
       return byId || byIdentity || (embedded.url ? embedded : null);
     }
-    return model.photos.filter((photo) => String(photo.station_id) === String(station.station_id)).sort((a, b) => dateValue(b.uploaded_at || b.date) - dateValue(a.uploaded_at || a.date))[0] || null;
+    return model.photos.filter((photo) => String(photo.station_id) === String(station.station_id)).sort((a, b) => photoSortTime(b) - photoSortTime(a))[0] || null;
   }
 
   function pendingMarkup(station) {
@@ -292,10 +325,10 @@
   }
 
   function renderPhotos() {
-    const photos = [...model.photos].sort((a, b) => dateValue(b.uploaded_at || b.date) - dateValue(a.uploaded_at || a.date));
+    const photos = [...model.photos].sort((a, b) => photoSortTime(b) - photoSortTime(a));
     $('#gallery-count').textContent = String(photos.length);
     $('#gallery-total').textContent = `${photos.length} photo${photos.length === 1 ? '' : 's'}`;
-    $('#recent-photos').innerHTML = photos.length ? photos.slice(0, 4).map((photo) => `<article class="recent-photo">${photoThumb(photo, 'recent')}<div><strong>${escapeHtml(stationName(photo.station_id))}</strong><small>${escapeHtml(formatDate(photo.uploaded_at || photo.date))}</small></div></article>`).join('') : '<div class="empty-inline">No photos have been uploaded yet. Received station photos will appear here.</div>';
+    $('#recent-photos').innerHTML = photos.length ? photos.slice(0, 4).map((photo) => `<article class="recent-photo">${photoThumb(photo, 'recent')}<div><strong>${escapeHtml(stationName(photo.station_id))}</strong><small>${escapeHtml(photoCaptureLabel(photo))}</small></div></article>`).join('') : '<div class="empty-inline">No photos have been uploaded yet. Received station photos will appear here.</div>';
     const stationFilter = $('#station-filter');
     const previous = stationFilter.value;
     stationFilter.innerHTML = '<option value="all">All stations</option>' + model.stations.map((station) => `<option value="${escapeHtml(station.station_id)}">${escapeHtml(station.name || station.station_id)}</option>`).join('');
@@ -312,19 +345,19 @@
       const name = `${photo.filename || ''} ${stationName(photo.station_id)}`.toLowerCase();
       if (query && !name.includes(query)) return false;
       if (station !== 'all' && String(photo.station_id) !== station) return false;
-      const time = dateValue(photo.uploaded_at || photo.date);
+      const time = photoSortTime(photo);
       if (range === 'today' && (!Number.isFinite(time) || new Date(time).toDateString() !== new Date().toDateString())) return false;
       if (range === 'week' && (!Number.isFinite(time) || time < now - 7 * 86400000)) return false;
       if (range === 'month' && (!Number.isFinite(time) || time < now - 30 * 86400000)) return false;
       return true;
-    }).sort((a, b) => dateValue(b.uploaded_at || b.date) - dateValue(a.uploaded_at || a.date));
+    }).sort((a, b) => photoSortTime(b) - photoSortTime(a));
     const grid = $('#photo-grid');
     if (!filtered.length) {
       const hasPhotos = model.photos.length > 0;
       grid.innerHTML = `<div class="empty-card gallery-empty"><span class="empty-icon">▧</span><strong>${hasPhotos ? 'No photos match these filters' : 'Your photo archive is empty'}</strong><p>${hasPhotos ? 'Try a different station, date range, or search.' : 'New camera uploads will be added to your archive automatically.'}</p>${hasPhotos ? '<button class="text-button" data-action="clear-filters">Clear filters</button>' : ''}</div>`;
       return;
     }
-    grid.innerHTML = filtered.map((photo) => `<article class="gallery-card">${photoThumb(photo, 'gallery')}<div class="gallery-photo-info"><div><strong>${escapeHtml(stationName(photo.station_id))}</strong><small>${escapeHtml(photo.filename || 'Station photo')}</small></div><time>${escapeHtml(formatDate(photo.uploaded_at || photo.date))}</time></div></article>`).join('');
+    grid.innerHTML = filtered.map((photo) => `<article class="gallery-card">${photoThumb(photo, 'gallery')}<div class="gallery-photo-info"><div><strong>${escapeHtml(stationName(photo.station_id))}</strong><small>${escapeHtml(photo.filename || 'Station photo')}</small></div><time title="${escapeHtml(photoReceivedLabel(photo))}">${escapeHtml(photoCaptureLabel(photo))}</time></div></article>`).join('');
   }
 
   function analysisParts(entry) {
@@ -624,7 +657,7 @@
     const url = safePhotoUrl(photo?.url || (photo?.id ? `/api/photos/${encodeURIComponent(photo.id)}` : ''));
     if (!url) return showToast('This image is not available.', true);
     $('#photo-large').src = url;
-    $('#photo-caption').textContent = `${stationName(photo.station_id || stationId)} · ${formatDate(photo.uploaded_at || photo.date)}`;
+    $('#photo-caption').textContent = `${stationName(photo.station_id || stationId)} · ${photoCaptureLabel(photo)} · ${photoReceivedLabel(photo)}`;
     $('#photo-dialog').showModal();
   }
 
