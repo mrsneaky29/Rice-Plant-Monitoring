@@ -313,6 +313,15 @@ def pending_commands(conn: sqlite3.Connection, station_id: str) -> list[dict[str
     return [{"id": row["id"], "type": row["type"], "payload": json.loads(row["payload_json"])} for row in rows]
 
 
+def recent_commands(conn: sqlite3.Connection, station_id: str) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id,type,state,message,result_json,created_at,updated_at FROM commands "
+        "WHERE station_id=? AND state IN ('completed','failed','uncertain','cancelled') "
+        "ORDER BY updated_at DESC,created_at DESC,id DESC LIMIT 5", (station_id,),
+    ).fetchall()
+    return [{"id": row["id"], "type": row["type"], "state": row["state"], "message": row["message"], "result": json.loads(row["result_json"]) if row["result_json"] else None, "created_at": admin_timestamp(row["created_at"]), "updated_at": admin_timestamp(row["updated_at"])} for row in rows]
+
+
 @app.post("/api/device/sync")
 def device_sync(body: SyncBody, request: Request) -> dict[str, Any]:
     station_id = device_station(request)
@@ -455,7 +464,7 @@ def admin_state(_: sqlite3.Row = Depends(require_admin)) -> dict[str, Any]:
             latest_payload = dict(latest) if latest else None
             if latest_payload:
                 latest_payload["uploaded_at"] = admin_timestamp(latest_payload["uploaded_at"])
-            station_data.append({"station_id": row["station_id"], "name": row["name"], "last_seen": admin_timestamp(row["last_seen"]), "next_wake_at": admin_timestamp(row["next_wake_at"]), "sleep_enabled": bool(row["sleep_enabled"]), "awake": bool(row["awake"]), "status": json.loads(row["status_json"]), "last_capture": json.loads(row["last_capture_json"]) if row["last_capture_json"] else None, "latest_photo": latest_payload, "pending_commands": pending_commands(conn, row["station_id"])})
+            station_data.append({"station_id": row["station_id"], "name": row["name"], "last_seen": admin_timestamp(row["last_seen"]), "next_wake_at": admin_timestamp(row["next_wake_at"]), "sleep_enabled": bool(row["sleep_enabled"]), "awake": bool(row["awake"]), "status": json.loads(row["status_json"]), "last_capture": json.loads(row["last_capture_json"]) if row["last_capture_json"] else None, "latest_photo": latest_payload, "pending_commands": pending_commands(conn, row["station_id"]), "recent_commands": recent_commands(conn, row["station_id"])})
     return {"stations": station_data, "photos": [{"id": p["id"], "station_id": p["station_id"], "date": p["date"], "filename": p["filename"], "url": f"/api/photos/{p['id']}", "uploaded_at": admin_timestamp(p["uploaded_at"])} for p in photos], "analysis_enabled": ANALYSIS_ENABLED}
 
 

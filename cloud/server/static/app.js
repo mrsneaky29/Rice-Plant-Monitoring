@@ -272,6 +272,39 @@
     return model.photos.filter((photo) => String(photo.station_id) === String(station.station_id)).sort((a, b) => photoSortTime(b) - photoSortTime(a))[0] || null;
   }
 
+  function currentUploadError(station) {
+    // The latest device report is authoritative, including an explicit clear.
+    const status = station.status || {};
+    for (const source of [status, station]) {
+      for (const key of ['last_upload_error', 'upload_error', 'upload_message']) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          return typeof source[key] === 'string' ? source[key].trim() : '';
+        }
+      }
+    }
+    return '';
+  }
+
+  function recentCommandsMarkup(station, limit = 3) {
+    const commands = (Array.isArray(station.recent_commands) ? station.recent_commands : [])
+      .filter((command) => ['completed', 'failed', 'uncertain', 'cancelled'].includes(command.state)).slice(0, limit);
+    if (!commands.length) return '';
+    return `<div class="station-commands"><span class="meta-label">RECENT COMMAND RESULTS</span><div class="pending-list">${commands.map((command) => {
+      const title = ({ take_photo: 'Take a photo', stay_awake: 'Stay awake', resume_sleep: 'Resume sleep', set_settings: 'Update settings' })[command.type] || 'Command';
+      const identity = command.result?.photo;
+      const photo = identity && model.photos.find((item) => String(item.station_id) === String(station.station_id) && item.date === identity.date && item.filename === identity.filename);
+      let outcome = ({ completed: 'Completed', failed: 'Failed', uncertain: 'Outcome uncertain', cancelled: 'Cancelled' })[command.state];
+      if (command.state === 'completed' && command.type === 'take_photo') {
+        outcome = photo ? 'Photo received' : identity ? 'Capture confirmed; photo not received yet' : 'Command completed; photo receipt not confirmed';
+      }
+      const message = command.message === 'reset_during_command'
+        ? 'Camera restarted before confirming completion. This request was not repeated automatically.'
+        : (command.state === 'failed' || command.state === 'uncertain') ? command.message || 'The camera did not confirm completion.' : '';
+      const time = command.updated_at ? formatDate(command.updated_at) : '';
+      return `<div class="pending-command"><span><strong>${escapeHtml(title)} · ${escapeHtml(outcome)}</strong><small>${escapeHtml(time)}${message ? ` · ${escapeHtml(message)}` : ''}</small></span>${photo ? `<button class="text-button" data-action="open-photo" data-photo="${escapeHtml(photo.id)}" data-station="${escapeHtml(station.station_id)}">View photo</button>` : ''}</div>`;
+    }).join('')}</div></div>`;
+  }
+
   function pendingMarkup(station) {
     const commands = Array.isArray(station.pending_commands) ? station.pending_commands : [];
     if (!commands.length) return '<div class="pending-empty">No pending commands</div>';
@@ -280,7 +313,8 @@
       const commandId = command.id || command.command_id;
       const title = ({ take_photo: 'Take a photo', stay_awake: 'Stay awake', resume_sleep: 'Resume sleep', set_settings: 'Update settings' })[type] || type.replaceAll('_', ' ');
       const state = command.status || 'Waiting for station';
-      return `<div class="pending-command"><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(state)} · delivered at next wake</small></span>${commandId ? `<button class="cancel-command" data-action="cancel" data-station="${escapeHtml(station.station_id)}" data-command="${escapeHtml(commandId)}" aria-label="Cancel ${escapeHtml(title)}">Cancel</button>` : ''}</div>`;
+      const delivery = reportedAwake(station) ? 'awaiting next device check-in' : 'delivered at next wake';
+      return `<div class="pending-command"><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(state)} · ${delivery}</small></span>${commandId ? `<button class="cancel-command" data-action="cancel" data-station="${escapeHtml(station.station_id)}" data-command="${escapeHtml(commandId)}" aria-label="Cancel ${escapeHtml(title)}">Cancel</button>` : ''}</div>`;
     }).join('')}</div>`;
   }
 
@@ -302,8 +336,7 @@
       const id = String(station.station_id ?? '');
       const photo = getLatestPhoto(station);
       const lastSeen = station.last_seen ? relativeTime(station.last_seen) : 'No check-in reported';
-      const uploadErrorCount = Number(station.status?.upload_error_count || 0);
-      const uploadError = station.upload_error || station.last_upload_error || station.upload_message || station.status?.upload_error || station.status?.last_upload_error || station.status?.upload_message || (uploadErrorCount > 0 && (station.status?.last_upload_error || `${uploadErrorCount} upload error${uploadErrorCount === 1 ? '' : 's'} reported since reboot`));
+      const uploadError = currentUploadError(station);
       const applied = station.last_seen ? station.applied_settings || station.status?.settings || station.status?.applied_settings || station.status || null : null;
       const requested = (Array.isArray(station.pending_commands) ? station.pending_commands : []).find((command) => command.type === 'set_settings')?.payload;
       const intervalReported = Number.isFinite(Number(applied?.interval_seconds)) && Number(applied.interval_seconds) > 0;
@@ -317,7 +350,7 @@
           <div class="station-meta"><div><span class="meta-label">LAST SEEN</span><strong title="${escapeHtml(formatDate(station.last_seen))}">${escapeHtml(lastSeen)}</strong></div><div><span class="meta-label">NEXT EXPECTED WAKE</span><strong>${escapeHtml(formatDate(station.next_wake_at))}</strong></div></div>
           <div class="settings-state"><span class="meta-label">STATION SETTINGS</span><p>${settingLine}</p>${requested ? `<small class="requested-state">Requested: ${requested.interval_seconds ? `${Math.round(requested.interval_seconds / 3600 * 10) / 10}h interval` : 'settings'} · awaiting station report</small>` : ''}</div>
           ${uploadError ? `<div class="upload-error"><span>!</span><span><strong>Photo upload issue reported</strong><small>${escapeHtml(typeof uploadError === 'string' ? uploadError : 'See station status for details.')}</small></span></div>` : ''}
-          <div class="station-commands"><div class="commands-head"><span class="meta-label">COMMAND QUEUE</span><span class="delivery-hint">Delivered at next wake</span></div>${pendingMarkup(station)}</div>
+          <div class="station-commands"><div class="commands-head"><span class="meta-label">COMMAND QUEUE</span><span class="delivery-hint">Next device check-in or wake</span></div>${pendingMarkup(station)}</div>${recentCommandsMarkup(station)}
           <div class="station-actions"><button class="button secondary" data-action="take-photo" data-station="${escapeHtml(id)}">Take photo</button><button class="button quiet" data-action="stay-awake" data-station="${escapeHtml(id)}">Stay awake</button><button class="button quiet" data-action="resume-sleep" data-station="${escapeHtml(id)}">Resume sleep</button></div>
         </div>
       </article>`;
@@ -666,8 +699,8 @@
     if (!station) return;
     const contents = $('#station-dialog-content');
     const latest = getLatestPhoto(station);
-    const errors = station.upload_error || station.last_upload_error || station.upload_message;
-    contents.innerHTML = `<p class="eyebrow">STATION DETAILS</p><h2>${escapeHtml(station.name || `Station ${id}`)}</h2><p class="muted">Camera station ${escapeHtml(id)}</p><div class="detail-grid"><div><span class="meta-label">REPORTED STATE</span>${statusMarkup(station)}</div><div><span class="meta-label">LAST SEEN</span><strong>${escapeHtml(formatDate(station.last_seen))}</strong></div><div><span class="meta-label">NEXT EXPECTED WAKE</span><strong>${escapeHtml(formatDate(station.next_wake_at))}</strong></div><div><span class="meta-label">APPLIED SLEEP SETTING</span><strong>${station.sleep_enabled === true ? 'Enabled' : station.sleep_enabled === false ? 'Disabled' : 'Not reported'}</strong></div></div>${errors ? `<div class="upload-error detail-error"><span>!</span><span><strong>Upload error reported</strong><small>${escapeHtml(errors)}</small></span></div>` : '<p class="empty-inline">No upload error is currently reported by this station.</p>'}<div class="detail-photo">${photoThumb(latest, 'station')}</div><h3>Pending commands</h3>${pendingMarkup(station)}<p class="delivery-hint modal-hint">Queued commands are delivered at the station’s next wake. A physical reset wakes it immediately.</p>`;
+    const errors = currentUploadError(station);
+    contents.innerHTML = `<p class="eyebrow">STATION DETAILS</p><h2>${escapeHtml(station.name || `Station ${id}`)}</h2><p class="muted">Camera station ${escapeHtml(id)}</p><div class="detail-grid"><div><span class="meta-label">REPORTED STATE</span>${statusMarkup(station)}</div><div><span class="meta-label">LAST SEEN</span><strong>${escapeHtml(formatDate(station.last_seen))}</strong></div><div><span class="meta-label">NEXT EXPECTED WAKE</span><strong>${escapeHtml(formatDate(station.next_wake_at))}</strong></div><div><span class="meta-label">APPLIED SLEEP SETTING</span><strong>${station.sleep_enabled === true ? 'Enabled' : station.sleep_enabled === false ? 'Disabled' : 'Not reported'}</strong></div></div>${errors ? `<div class="upload-error detail-error"><span>!</span><span><strong>Upload error reported</strong><small>${escapeHtml(errors)}</small></span></div>` : '<p class="empty-inline">No upload error is currently reported by this station.</p>'}<div class="detail-photo">${photoThumb(latest, 'station')}</div><h3>Pending commands</h3>${pendingMarkup(station)}${recentCommandsMarkup(station, 5)}<p class="delivery-hint modal-hint">Queued commands are delivered at the next device check-in while awake, or its next scheduled wake. A physical reset wakes it immediately.</p>`;
     $('#station-dialog').showModal();
   }
 

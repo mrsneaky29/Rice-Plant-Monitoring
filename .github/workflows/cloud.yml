@@ -21,6 +21,7 @@ jobs:
       - run: python -m pytest cloud/server/tests cloud/deploy/test_sd_import.py cloud/deploy/test_pull_camera.py cloud/review_tests -q
       - run: node --test cloud/server/tests/static_client.test.cjs
       - run: node --test cloud/review_tests/photo_capture_time.test.cjs
+      - run: node --test cloud/review_tests/website_feedback.test.cjs
       - run: g++ -std=c++17 -fsyntax-only cloud/firmware/tests/capture_schedule_logic_test.cpp cloud/review_tests/cloud_upload_policy_test.cpp
   cloud-firmware:
     runs-on: ubuntu-latest

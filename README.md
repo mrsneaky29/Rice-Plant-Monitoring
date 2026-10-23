@@ -16,22 +16,22 @@ The project grew through physical assembly, firmware flashing, live camera tests
 
 ![System architecture](docs/architecture.svg)
 
-The diagram and table describe the last recorded verification on 22 October 2026. This documentation audit on 23 October made no new live-service or hardware checks.
+The diagram and table include read-only cloud/browser verification on 23 October 2026 and the earlier dated hardware observations. This follow-up sent no camera commands or new paid analysis requests.
 
 The main path is ESP32 → verified HTTPS → DigitalOcean service → private browser dashboard. Commands travel back at the next device sync or wake. The original local PC hub remains a separate optional path, rather than a required bridge.
 
-## Last recorded cloud verification — 22 October 2026
+## Last recorded cloud verification — 23 October 2026
 
 | Area | Verified state |
 | --- | --- |
-| Dashboard | HTTPS deployment recorded; full photo cards; capture-time display, gallery order and date filters use camera filename timestamps. Timestamp and command-feedback fixes were narrowly deployed on 22 October; health returned HTTP 200, but a final browser check remained pending |
+| Dashboard | HTTPS deployment recorded; full photo cards; capture-time display, gallery order and date filters use camera filename timestamps. Timestamp and command-feedback fixes were narrowly deployed on 22 October; health returned HTTP 200; the retained command outcomes and cleared warning were verified in the live browser on 23 October |
 | Plant 2 | Three direct cloud captures verified on 18 October; on 22 October, daytime gaps and two reset-interrupted capture commands were observed; reliable hourly capture is not established |
 | Original photographs | Retained on SD; automatic legacy-file relocation disabled; historical uploads require explicit opt-in |
 | Upload recovery | New captures use temporary files and durable upload markers; acknowledgement retains the original |
 | Photo protection | Delete/erase controls blocked in the cloud firmware build; no destructive route was invoked during validation |
 | Sleep | Plant 2 reported enabled with a one-hour interval on 22 October; reliable full wake/capture/upload/sleep acceptance remains pending |
 | Plants 1 and 3 | Cloud firmware rollout deferred; no current cloud-operation claim for either board |
-| Automatic analysis | Enabled on 22 October for ordinary uploads with verified `gpt-6.1-sol` account access and one count check; explicitly marked archive imports excluded; first complete live analysis/report cycle remained unverified |
+| Automatic analysis | Enabled on 22 October for ordinary uploads with verified `gpt-6.1-sol` account access and one count check; explicitly marked archive imports excluded; one new Plant 2 photo, its matching checksum and its completed report were verified on 23 October; the job ran on 22 October, completing about 41 seconds after upload |
 
 Local HTTP status can time out while cloud reporting continues. Power-cut recovery, weak-Wi-Fi stress tests, SD file-by-file integrity checks and the camera-reset cause remain outstanding. The last checked backend used its original release directory with targeted analysis startup/archive safeguards, a worker update, and the later narrow website fixes; other server/backup changes in source are not established as deployed. No camera firmware or settings changed during the 22 October follow-up. The dated observations here are not a fresh availability check.
 
@@ -106,7 +106,7 @@ Historical wiring identifies Plant 1 by ADS1115 on GPIO3/RX0 and GPIO1/TX0, Plan
 
 ## Optional photo analysis
 
-In the original hub, analysis runs on the PC after an image is downloaded. Supply `OPENAI_API_KEY` in the hub environment or save a key through its dashboard to enable that integration. At the last recorded check on 22 October 2026, the separate cloud service had automatic analysis enabled for ordinary uploads using verified `gpt-6.1-sol` account access and one count check. Explicitly marked archive imports were excluded, and a complete new-photo analysis/report cycle remained unverified. Opting into firmware upload of old SD photographs does not itself mark them as archives: those ordinary uploads can trigger paid analysis. Fresh, unconfigured cloud installations default to analysis off; see [cloud analysis configuration](cloud/README.md#optional-analysis).
+In the original hub, analysis runs on the PC after an image is downloaded. Supply `OPENAI_API_KEY` in the hub environment or save a key through its dashboard to enable that integration. At the last recorded check on 22 October 2026, the separate cloud service had automatic analysis enabled for ordinary uploads using verified `gpt-6.1-sol` account access and one count check. Explicitly marked archive imports were excluded. On 23 October, read-only production records and the browser confirmed one newly uploaded Plant 2 photo and a completed report from 22 October, without submitting another request. This does not establish numerical measurement accuracy or capture/sleep reliability. Opting into firmware upload of old SD photographs does not itself mark them as archives: those ordinary uploads can trigger paid analysis. Fresh, unconfigured cloud installations default to analysis off; see [cloud analysis configuration](cloud/README.md#optional-analysis).
 
 The local settings expose model, reasoning effort, and one to three tiller-count checks. New local databases default to `gpt-5.6-sol`, low effort and one check; those identifiers reflect the original development environment, so verify availability and reasoning support in your API account before enabling paid requests. Saving a key makes eligible queued photographs available for automatic paid analysis. By default, photos dated before the hub's first analysis cutoff, or without a recognized filename timestamp, synchronize as history. Reanalysis is an explicit action. Local analysis uses stored background responses and sends image content to the configured API.
 
@@ -141,6 +141,7 @@ Cloud validation also covers isolated server, import, backup, publication and re
 python -m pytest cloud/server/tests cloud/deploy/test_sd_import.py cloud/deploy/test_pull_camera.py cloud/review_tests -q
 node --test cloud/server/tests/static_client.test.cjs
 node --test cloud/review_tests/photo_capture_time.test.cjs
+node --test cloud/review_tests/website_feedback.test.cjs
 ```
 
 ## Source map
