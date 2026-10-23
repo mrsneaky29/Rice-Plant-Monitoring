@@ -1,12 +1,14 @@
 # Engineering record
 
+This page records the **original local-hub implementation** and its historical tests. The current remote-access path is the [public HTTPS cloud dashboard](https://admin.riceplant.achantalabs.com), described in the [cloud README](../cloud/README.md). Local HTTP/UDP behavior below does not describe the cloud service's authentication or deep-sleep lifecycle.
+
 ## Problem and design
 
 The central PC is not available continuously. Putting storage on each camera allows observations to survive PC downtime. The hub retrieves the backlog when it returns; keeping originals on SD makes the devices a second source of recovery.
 
 UDP announcements carry station identity and IP. Stations rotate their scheduled announcements in 20-minute slots, with staggered fallback attempts. The hub also broadcasts at startup and every minute. Device identity is persistent, but IP addresses are not: the prototype demonstrated a station moving to a different DHCP address. Each board needs a unique station number, even after flashing the same sketch.
 
-The devices stay powered and run their normal loops. The hourly capture timer is not an hourly power-on/deep-sleep cycle. There is no mechanism to wake a powered-off board remotely.
+With the original local firmware, devices stay powered and run their normal loops. Its capture timer does not implement deep sleep. The separate cloud firmware supports optional timer wake from deep sleep; dashboard commands wait until the next check-in or wake. Neither variant can remotely turn on a physically powered-off board.
 
 ## Queue and recovery
 
@@ -31,16 +33,16 @@ These measurements come from a previous development run. They do not establish l
 
 ## Changes in the publication copy
 
-Wi-Fi and OTA credentials moved to an ignored `secrets.h`. Hub API keys can also come from the environment. Launching a second hub opens the existing dashboard before starting more workers or touching the database. JPEG validation rejects missing end markers. Documentation reflects the current Camera-only deployment and the optional status of analysis.
+Wi-Fi and OTA credentials moved to an ignored `secrets.h`. Hub API keys can also come from the environment. Launching a second hub opens the existing dashboard before starting more workers or touching the database. JPEG validation rejects missing end markers. The original hub runs in Camera-only mode. Cloud automatic analysis was enabled for new ordinary uploads at the 22 October 2026 checkpoint; a complete fresh-photo analysis cycle was still unverified then.
 
 ## Limitations and next experiments
 
 - Evaluate tiller estimates against human-labelled photographs, including occlusion and multiple clumps.
 - Repeated counting checks currently happen inside one model response; independent requests need a separate experiment and cost accounting.
 - Add reproducible power-loss fault injection across queue transitions.
-- Evaluate authenticated device/hub control before operation beyond a trusted LAN.
+- Keep the original hub and camera HTTP controls on the local network. Use the separate authenticated HTTPS cloud service for internet access; it already implements administrator sessions, CSRF checks and station-bound credentials.
 - Improve station discovery diagnostics and configure a reproducible time-zone policy. Firmware currently defaults to UTC+05:30.
-- SD retention is indefinite until storage fills; capacity needs monitoring.
+- Monitor finite SD capacity and preserve a separate backup. The original local firmware permits delete/erase operations, requests formatting on SD mount failure, and relocates legacy flat photos. The cloud protected build disables these automatic/destructive paths; do not use the original variant as a recovery image for a card containing the only copy of photographs.
 - Review inherited firmware attribution before selecting a redistribution license.
 
 ## Portfolio interpretation

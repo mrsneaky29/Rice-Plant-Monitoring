@@ -1,12 +1,19 @@
 # Setup and troubleshooting
 
+These instructions build the **original local PC hub and local camera firmware**. For the deployed internet-facing dashboard and protected direct-upload firmware, follow the [cloud setup](../cloud/README.md). The cloud dashboard uses HTTPS, administrator sessions and individual device credentials; the local HTTP controls described here are a separate interface.
+
+**Protect existing cards before flashing the local variant.** Its SD initializer requests formatting on mount failure, and it can relocate legacy flat photos and expose delete/erase controls. The protected cloud variant disables those paths. Preserve a verified separate copy of original photographs before using local firmware or attempting SD recovery.
+
 ## Firmware
 
 The sketch includes `secrets.h`. Copy the example before compiling; never commit your credentials. The default camera configuration selects AI Thinker pins and OV5640. Verify the installed module before changing sensor-specific settings.
 
-With Arduino CLI and the ESP32 core installed:
+With Arduino CLI installed, use the tested ESP32 core and library versions:
 
 ```powershell
+arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+arduino-cli core update-index
+arduino-cli core install esp32:esp32@3.3.11
 arduino-cli lib install "ArduinoJson@7.4.3"
 arduino-cli compile --fqbn esp32:esp32:esp32cam --output-dir build-firmware ESP32_Station
 ```
@@ -39,4 +46,4 @@ Use `PC_Hub/Open Monitoring Hub.bat`. For login startup, create a Windows Startu
 | Dashboard visible only on host          | Ensure same LAN, correct PC IP, and private-network firewall permission.                                                                     |
 | API jobs fail                           | Verify account key, configured model identifier, reasoning support, and the visible queue error. Capture still works without API processing. |
 
-Physically connected sensors may remain attached in Camera-only mode, but power and GPIO conflicts can still affect a board. Disconnect peripheral connections that share serial-programming pins before using a programmer.
+The original hub forces Camera-only behavior: when it discovers a camera reporting a soil or DHT22 role, it requests `role=none` and reboots the board. Do not run that hub expecting to preserve active sensor roles. Physically connected sensors may remain attached, but power and GPIO conflicts can still affect a board. Disconnect peripheral connections that share serial-programming pins before using a programmer.
